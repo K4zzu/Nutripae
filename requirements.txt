@@ -1,0 +1,11 @@
+streamlit>=1.40
+plotly>=5.20
+pandas>=2.0
+pillow>=10.0
+numpy>=1.26
+python-dotenv>=1.0
+
+# Opcionales según el backend de visión que uses:
+# anthropic>=0.40          # Visión LLM con Claude
+# google-genai>=1.0        # Visión LLM con Gemini
+# ultralytics>=8.3         # YOLO local (producción / edge)
