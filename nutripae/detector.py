@@ -4,7 +4,7 @@ Todos devuelven una lista de `Deteccion` (alimento, gramos estimados, caja, apto
 
 - DemoDetector      : sin modelo. Simula una detección coherente con la minuta y el
                       peso esperado de la minuta. Sirve para demostrar el flujo sin API ni GPU.
-- VisionLLMDetector : usa un modelo multimodal (Claude o Gemini) con salida JSON
+- VisionLLMDetector : usa un modelo multimodal (Claude, Gemini u OpenAI) con salida JSON
                       estructurada. Funciona en minutos con una API key; es el backend
                       recomendado para el piloto.
 - YoloDetector      : modelo YOLO fine-tuned (ultralytics) con un dataset propio de
@@ -148,18 +148,22 @@ DENSIDAD = {
 }
 
 
+# variable de entorno con la API key de cada proveedor
+ENV_KEY = {"anthropic": "ANTHROPIC_API_KEY", "gemini": "GEMINI_API_KEY", "openai": "OPENAI_API_KEY"}
+
+
 class VisionLLMDetector(Detector):
-    """Modelo multimodal con salida JSON. Proveedores: 'anthropic' o 'gemini'."""
+    """Modelo multimodal con salida JSON. Proveedores: 'anthropic', 'gemini' u 'openai'."""
     nombre = "Visión LLM"
 
     def __init__(self, proveedor: str = "anthropic", modelo: str | None = None, api_key: str | None = None,
                  modo: str = "entrega"):
         self.proveedor = proveedor
         self.modelo = modelo or os.getenv("NUTRIPAE_MODELO")
-        self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY" if proveedor == "anthropic" else "GEMINI_API_KEY")
+        self.api_key = api_key or os.getenv(ENV_KEY.get(proveedor, ""))
         self.modo = modo  # "entrega" | "devolucion"
         if not self.api_key:
-            raise ValueError("Falta la API key del proveedor de visión (ANTHROPIC_API_KEY o GEMINI_API_KEY).")
+            raise ValueError("Falta la API key del proveedor de visión (ANTHROPIC_API_KEY, GEMINI_API_KEY u OPENAI_API_KEY).")
 
     def _prompt(self, minuta, grado):
         from .menu import GRADOS
@@ -199,6 +203,19 @@ class VisionLLMDetector(Detector):
                 config=types.GenerateContentConfig(response_mime_type="application/json"),
             )
             return r.text
+        if self.proveedor == "openai":
+            from openai import OpenAI
+            cliente = OpenAI(api_key=self.api_key)
+            r = cliente.chat.completions.create(
+                model=self.modelo or "gpt-4.1-mini",
+                response_format={"type": "json_object"},
+                messages=[{"role": "user", "content": [
+                    {"type": "image_url", "image_url": {
+                        "url": "data:image/jpeg;base64," + base64.b64encode(datos).decode()}},
+                    {"type": "text", "text": prompt},
+                ]}],
+            )
+            return r.choices[0].message.content
         raise ValueError(f"Proveedor no soportado: {self.proveedor}")
 
     def detectar(self, imagen, minuta, grado, peso_g):
@@ -279,36 +296,54 @@ def corregir_con_bascula(detecciones: list[Deteccion], peso_g: float | None) -> 
     return detecciones
 
 
-def dibujar_overlay(imagen: Image.Image, detecciones: list[Deteccion], estados: dict[str, str] | None = None) -> Image.Image:
-    """Dibuja cajas y etiquetas sobre la imagen. `estados`: alimento -> 'ok'|'bajo'|'falta'|'no_apto'."""
+def _fuente(tam: int):
+    for nombre in ("DejaVuSans-Bold.ttf", "arialbd.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"):
+        try:
+            return ImageFont.truetype(nombre, tam)
+        except Exception:
+            continue
+    return ImageFont.load_default(tam)
+
+
+# colores del sistema de diseño NutriPAE: estado -> (color de la caja, color del texto)
+_COLOR_ESTADO = {
+    "ok": ((31, 122, 77), (255, 255, 255)), "alto": ((31, 122, 77), (255, 255, 255)),
+    "bajo": ((232, 163, 23), (43, 29, 0)), "falta": ((184, 50, 42), (255, 255, 255)),
+    "no_apto": ((122, 35, 72), (255, 255, 255)), "sobrante": ((242, 181, 58), (43, 29, 0)),
+}
+
+
+def dibujar_overlay(imagen: Image.Image, detecciones: list[Deteccion], estados: dict[str, str] | None = None,
+                    estado_fijo: str | None = None) -> Image.Image:
+    """Dibuja cajas y etiquetas sobre la imagen. `estados`: alimento -> 'ok'|'bajo'|'alto'|'falta'|'no_apto'.
+    `estado_fijo` pinta todas las cajas igual (p. ej. 'sobrante' en la estación de devolución)."""
     img = imagen.convert("RGB").copy()
     w, h = img.size
     draw = ImageDraw.Draw(img, "RGBA")
-    try:
-        font = ImageFont.truetype("DejaVuSans-Bold.ttf", max(14, w // 45))
-    except Exception:
-        font = ImageFont.load_default()
-    colores = {"ok": (46, 160, 67), "bajo": (230, 160, 30), "falta": (200, 40, 40), "no_apto": (160, 30, 160)}
+    font = _fuente(max(14, w // 50))
+    grosor = max(3, w // 220)
     for d in detecciones:
         x1, y1, x2, y2 = d.bbox
-        est = (estados or {}).get(d.alimento, "ok" if d.apto else "no_apto")
-        col = colores.get(est, (60, 120, 220))
+        est = estado_fijo or (estados or {}).get(d.alimento, "ok" if d.apto else "no_apto")
+        col, fg = _COLOR_ESTADO.get(est, _COLOR_ESTADO["ok"])
         box = (x1 * w, y1 * h, x2 * w, y2 * h)
-        draw.rectangle(box, outline=col + (255,), width=max(3, w // 200))
-        draw.rectangle(box, fill=col + (40,))
-        label = f"{d.nombre}  {d.gramos:.0f} g"
+        radio = max(8, w // 70)
+        draw.rounded_rectangle(box, radius=radio, fill=col + (38,), outline=col + (255,), width=grosor)
+        label = f"{d.nombre} · {d.gramos:.0f} g"
         tw, th = draw.textbbox((0, 0), label, font=font)[2:]
-        draw.rectangle((box[0], box[1], box[0] + tw + 10, box[1] + th + 8), fill=col + (230,))
-        draw.text((box[0] + 5, box[1] + 3), label, fill="white", font=font)
+        draw.rounded_rectangle((box[0], box[1], box[0] + tw + 16, box[1] + th + 12), radius=radio, fill=col + (240,))
+        draw.text((box[0] + 8, box[1] + 5), label, fill=fg, font=font)
     return img
 
 
 def bandeja_sintetica(detecciones: list[Deteccion], tamano=(900, 600)) -> Image.Image:
-    """Genera una imagen esquemática de bandeja para el modo demo (sin cámara)."""
-    img = Image.new("RGB", tamano, (236, 232, 222))
+    """Genera una imagen esquemática de bandeja para el modo demo (sin cámara), con el fondo
+    oscuro de la vista cenital del sistema de diseño."""
+    img = Image.new("RGB", tamano, (26, 32, 29))
     draw = ImageDraw.Draw(img)
     w, h = tamano
-    draw.rounded_rectangle((8, 8, w - 8, h - 8), radius=30, outline=(170, 160, 140), width=6, fill=(246, 243, 236))
+    draw.rounded_rectangle((int(w * .02), int(h * .03), int(w * .99), int(h * .97)), radius=36,
+                           outline=(58, 69, 64), width=4, fill=(43, 52, 48))
     for d in detecciones:
         x1, y1, x2, y2 = d.bbox
         col = TABLA[d.alimento].color if d.alimento in TABLA else "#999999"
@@ -316,5 +351,5 @@ def bandeja_sintetica(detecciones: list[Deteccion], tamano=(900, 600)) -> Image.
             col = "#5a3a2a"
         cx, cy = (x1 + x2) / 2 * w, (y1 + y2) / 2 * h
         rx, ry = (x2 - x1) / 2 * w * 0.8, (y2 - y1) / 2 * h * 0.8
-        draw.ellipse((cx - rx, cy - ry, cx + rx, cy + ry), fill=col, outline=(120, 110, 95), width=3)
+        draw.ellipse((cx - rx, cy - ry, cx + rx, cy + ry), fill=col, outline=(37, 45, 41), width=3)
     return img

@@ -48,12 +48,16 @@ def conectar(path: Path = DB_PATH) -> sqlite3.Connection:
     return con
 
 
-def registrar_entrega(con, *, sede, bandeja, grado, minuta, peso_g, resultado, backend, corregida=False, ts=None) -> int:
+def registrar_entrega(con, *, sede, bandeja, grado, minuta, peso_g, resultado, backend, corregida=False, inicial=None,
+                      ts=None) -> int:
+    """`inicial`: veredicto del primer análisis cuando la ración se corrigió y re-analizó. Se guarda ese
+    semáforo/alertas (cumplimiento a la primera) y las porciones/nutrientes de `resultado` (lo que recibió el estudiante)."""
+    veredicto = inicial or resultado
     cur = con.execute(
         "INSERT INTO entregas (ts,sede,bandeja,grado,minuta,peso_g,semaforo,aprobada,corregida,alertas,porciones,nutrientes,backend)"
         " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
         ((ts or datetime.now()).isoformat(timespec="seconds"), sede, bandeja, grado, minuta, peso_g,
-         resultado.semaforo, int(resultado.aprobada), int(corregida), json.dumps(resultado.alertas, ensure_ascii=False),
+         veredicto.semaforo, int(veredicto.aprobada), int(corregida), json.dumps(veredicto.alertas, ensure_ascii=False),
          json.dumps(resultado.porciones()), json.dumps(resultado.nutrientes), backend),
     )
     con.commit()
@@ -78,6 +82,12 @@ def ultima_entrega_pendiente(con, bandeja: str):
     if not row:
         return None
     return {"id": row[0], "grado": row[1], "minuta": row[2], "porciones": json.loads(row[3])}
+
+
+def contar_hoy(con, sede: str) -> int:
+    """Raciones registradas hoy en la sede (para la barra de progreso del turno)."""
+    hoy = datetime.now().date().isoformat()
+    return con.execute("SELECT COUNT(*) FROM entregas WHERE sede = ? AND substr(ts, 1, 10) = ?", (sede, hoy)).fetchone()[0]
 
 
 def cargar_entregas(con) -> pd.DataFrame:

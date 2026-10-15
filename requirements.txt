@@ -1,11 +1,12 @@
-streamlit>=1.40
-plotly>=5.20
+streamlit>=1.50
 pandas>=2.0
-pillow>=10.0
+pillow>=10.1
 numpy>=1.26
 python-dotenv>=1.0
+openai>=1.40               # IA de visión (proveedor por defecto del piloto)
 
-# Opcionales según el backend de visión que uses:
-# anthropic>=0.40          # Visión LLM con Claude
-# google-genai>=1.0        # Visión LLM con Gemini
-# ultralytics>=8.3         # YOLO local (producción / edge)
+# Opcionales según el proveedor de IA que uses:
+# anthropic>=0.40          # IA de visión con Claude
+# google-genai>=1.0        # IA de visión con Gemini
+# Fase 2 (no se usa en el piloto; instala PyTorch, varios GB):
+# ultralytics>=8.3         # modelo propio YOLO en la estación (edge)
