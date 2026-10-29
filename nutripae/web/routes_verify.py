@@ -11,7 +11,7 @@ from PIL import Image
 from pydantic import BaseModel
 
 from nutripae import auth, db, foods, messages, verificaciones
-from nutripae.analyze import Analizador, Ocupado, PersonaDetectada
+from nutripae.analyze import Analizador, Ocupado, PersonaDetectada, SinBandeja
 from nutripae.balance import UMBRALES_INICIALES, Veredicto
 from nutripae.overlay import COLOR_NO_APTO, reducir
 from nutripae.segment import SegmentadorElipses
@@ -47,7 +47,7 @@ def _color(p) -> str:
 
 
 def _respuesta(vid: int, v: Veredicto, titulo: str, detalle: str, estudiante,
-               foto_url: str | None, tarjeta_invalida: bool) -> dict:
+               foto_url: str | None, tarjeta_invalida: bool, guardado: bool) -> dict:
     return {
         "id": vid, "semaforo": v.semaforo, "titulo": titulo, "detalle": detalle,
         "nombre": _primer_nombre(estudiante),
@@ -61,6 +61,7 @@ def _respuesta(vid: int, v: Veredicto, titulo: str, detalle: str, estudiante,
         "estudiante": None if estudiante is None else
         {"id": estudiante["id"], "nombre": estudiante["nombre"], "grado": estudiante["grado"]},
         "tarjeta_invalida": tarjeta_invalida,
+        "guardado": guardado,  # quedó a nombre del estudiante (falso en práctica, sin estudiante o sin consentimiento)
     }
 
 
@@ -130,6 +131,8 @@ def api_verificar(request: Request, usuario=Depends(auth.requiere(*ROLES_VERIFIC
         analisis = analizador.analizar(imagen, grado_final, _primer_nombre(estudiante))
     except PersonaDetectada:
         return _error(422, "persona", "Repite la foto: solo la bandeja.")
+    except SinBandeja:
+        return _error(422, "bandeja", "No veo la bandeja. Acércala a la cámara.")
     except Ocupado:
         return _error(503, "ocupado", "Un momento…")
     except Exception:
@@ -138,10 +141,11 @@ def api_verificar(request: Request, usuario=Depends(auth.requiere(*ROLES_VERIFIC
 
     vid = verificaciones.guardar(con, app.state.settings, analisis, estudiante=estudiante, sede=sede,
                                  grado=grado_final, usuario_id=request.state.usuario["id"], modo=modo)
-    ruta = con.execute("SELECT foto FROM verificaciones WHERE id=?", (vid,)).fetchone()["foto"]
+    guardada = con.execute("SELECT foto, estudiante_id FROM verificaciones WHERE id=?", (vid,)).fetchone()
+    ruta = guardada["foto"]
     foto_url = f"/fotos/{ruta}" if ruta else _data_url(analisis.foto_anotada)
     return _respuesta(vid, analisis.veredicto, analisis.titulo, analisis.detalle, estudiante,
-                      foto_url, tarjeta_invalida)
+                      foto_url, tarjeta_invalida, guardada["estudiante_id"] is not None)
 
 
 class Correccion(BaseModel):
@@ -164,7 +168,7 @@ def api_corregir(vid: int, cuerpo: Correccion, request: Request,
     estudiante = db.estudiante(con, fila["estudiante_id"]) if fila["estudiante_id"] else None
     titulo, detalle = messages.mensaje(v, _primer_nombre(estudiante), grado=fila["grado"])
     foto_url = f"/fotos/{fila['foto']}" if fila["foto"] else None
-    return _respuesta(vid, v, titulo, detalle, estudiante, foto_url, False)
+    return _respuesta(vid, v, titulo, detalle, estudiante, foto_url, False, fila["estudiante_id"] is not None)
 
 
 @router.get("/api/alimentos")

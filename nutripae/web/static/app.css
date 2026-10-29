@@ -166,6 +166,11 @@ body { margin: 0; background: var(--bg); }
 .np-v-nutrientes dt { color: var(--tinta2); }
 .np-v-nutrientes dd { margin: 0; text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
 .np-v-practica { display: flex; flex-direction: column; gap: 6px; }
+.np-v-practica-banda { margin: 0 0 12px; padding: 12px 18px; border-radius: 14px; font-weight: 800;
+  background: var(--amarillo-claro); color: var(--amarillo-texto); border: 2px solid var(--amarillo); }
+.np-v-practica-banda[hidden] { display: none; }
+.np-v-practica-banda span { display: inline-grid; place-items: center; width: 24px; height: 24px; margin-right: 6px;
+  border-radius: 50%; background: var(--amarillo); color: var(--tinta); }
 .np-v-docente select, .np-v-docente input[type="search"] { min-height: 44px; padding: 0 14px; border: 2px solid var(--line);
   border-radius: 14px; background: var(--suave); font: 600 16px var(--sans); color: var(--tinta); }
 .np-v-docente select:focus, .np-v-docente input[type="search"]:focus { outline: none; border-color: var(--morado);

@@ -82,3 +82,21 @@ def test_estacion_oculta_la_barra_y_deja_salir_discreto(client, settings):
 def test_entrar_usa_logo_nuevo(client):
     html = client.get("/entrar").text
     assert "/static/img/logo" in html and "#145236" not in html
+
+
+def test_practica_visible_y_solo_en_la_sesion(client, settings):
+    from tests.conftest import login
+    login(client, settings, ["docente"])
+    html = client.get("/verificar").text
+    assert 'id="practica-banda"' in html and "Práctica: no se guarda nada" in html
+    # la banda va en la capa de la docente, no en la del niño
+    assert html.index('id="practica-banda"') > html.index('class="np-v-docente"')
+    assert '.np-v-practica-banda' in CSS and "--amarillo-claro" in CSS
+    assert 'sesion.get("np.practica"' in JS and 'sesion.set("np.situacion"' in JS
+    assert 'local.set("np.practica"' not in JS and 'local.get("np.situacion"' not in JS
+    assert "sessionStorage" in JS
+
+
+def test_cuadro_vacio_y_sin_consentimiento_en_la_pantalla():
+    assert 'j.error === "bandeja"' in JS and "AVISO_BANDEJA = 3000" in JS
+    assert "Sin consentimiento: no se guardó" in JS and "j.guardado === false" in JS

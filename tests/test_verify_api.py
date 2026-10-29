@@ -182,3 +182,57 @@ def test_fotos_impide_salir_de_la_carpeta(client, settings):
     login(client, settings, ["docente"])
     assert client.get("/fotos/../secreto.txt").status_code == 404
     assert client.get("/fotos/..%2Fsecreto.txt").status_code == 404
+
+
+# --- cuadro vacío, campo "guardado" -----------------------------------------------------------
+
+def _contar_verificaciones(settings):
+    return db.conectar(settings.db_path).execute("SELECT COUNT(*) FROM verificaciones").fetchone()[0]
+
+
+def test_cuadro_vacio_da_422_y_no_guarda(client, app, settings):
+    class VisionVacia:
+        def analizar(self, imagen): return ResultadoVision([], persona=False)
+    app.state.analizador = Analizador(VisionVacia(), SegmentadorElipses(), UMBRALES_INICIALES)
+    _estudiante_con_tarjeta(settings)
+    login(client, settings, ["docente"])
+    r = client.post("/api/verificar", files={"foto": foto()}, data={"modo": "camara", "tarjeta": "QR1"})
+    assert r.status_code == 422
+    assert r.json() == {"error": "bandeja", "mensaje": "No veo la bandeja. Acércala a la cámara."}
+    assert _contar_verificaciones(settings) == 0
+
+
+def test_solo_bebida_da_422(client, app, settings):
+    from nutripae.vision import Deteccion
+
+    class VisionSoloJugo:
+        def analizar(self, imagen):
+            return ResultadoVision([Deteccion("jugo_natural", "Jugo", 200, (0.1, 0.1, 0.4, 0.4), 0.9, True, "")])
+    app.state.analizador = Analizador(VisionSoloJugo(), SegmentadorElipses(), UMBRALES_INICIALES)
+    login(client, settings, ["docente"])
+    r = client.post("/api/verificar", files={"foto": foto()}, data={"modo": "camara"})
+    assert r.status_code == 422 and r.json()["error"] == "bandeja"
+    assert _contar_verificaciones(settings) == 0
+
+
+def test_guardado_verdadero_con_consentimiento(client, app, settings):
+    _estudiante_con_tarjeta(settings)
+    _con_camara(app)
+    login(client, settings, ["docente"])
+    j = client.post("/api/verificar", files={"foto": foto()}, data={"modo": "camara", "tarjeta": "QR1"}).json()
+    assert j["guardado"] is True
+
+
+def test_guardado_falso_sin_consentimiento_sin_estudiante_y_en_practica(client, app, settings):
+    eid = _estudiante_con_tarjeta(settings)
+    con = db.conectar(settings.db_path)
+    con.execute("UPDATE estudiantes SET consentimiento=0 WHERE id=?", (eid,)); con.commit()
+    _con_camara(app)
+    login(client, settings, ["docente"])
+    sin_consentimiento = client.post("/api/verificar", files={"foto": foto()},
+                                     data={"modo": "camara", "estudiante_id": str(eid)}).json()
+    assert sin_consentimiento["estudiante"]["id"] == eid and sin_consentimiento["guardado"] is False
+    assert client.post("/api/verificar", files={"foto": foto()}, data={"modo": "camara"}).json()["guardado"] is False
+    practica = client.post("/api/verificar", files={"foto": foto()},
+                           data={"modo": "demo", "escenario": "completa", "estudiante_id": str(eid)}).json()
+    assert practica["guardado"] is False

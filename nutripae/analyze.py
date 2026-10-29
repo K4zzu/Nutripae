@@ -16,6 +16,10 @@ class PersonaDetectada(Exception):
     """La toma incluye a una persona: se descarta."""
 
 
+class SinBandeja(Exception):
+    """En la foto no se ve comida (ninguna detección o solo bebida): no hay veredicto."""
+
+
 class Ocupado(Exception):
     """Otro análisis está en curso y no se liberó a tiempo."""
 
@@ -45,6 +49,8 @@ class Analizador:
             resultado = self._vision.analizar(imagen)
             if resultado.persona:
                 raise PersonaDetectada()
+            if not resultado.detecciones:
+                raise SinBandeja()
             if isinstance(self._vision, VisionDemo):
                 imagen = overlay.bandeja_sintetica(resultado.detecciones)
             if isinstance(self._segmentador, SegmentadorElipses):
@@ -52,6 +58,8 @@ class Analizador:
             else:
                 regiones = self._segmentador.segmentar(imagen)
             porciones = fuse.cruzar(resultado.detecciones, regiones, self._catalogo() if self._catalogo else None)
+            if sum(p.gramos for p in porciones if p.grupo != "bebida") <= 0:
+                raise SinBandeja()  # un cuadro vacío no puede dar un veredicto rojo
             umbrales = self._umbrales() if callable(self._umbrales) else self._umbrales
             veredicto = balance.evaluar(porciones, grado, umbrales)
             titulo, detalle = messages.mensaje(veredicto, nombre, grado=grado)

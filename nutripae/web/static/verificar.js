@@ -7,6 +7,11 @@
     get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* sin almacenamiento */ } },
   };
+  // la práctica dura solo mientras la pestaña siga abierta: nunca sorprende al día siguiente
+  const sesion = {
+    get(k, d) { try { const v = sessionStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
+    set(k, v) { try { sessionStorage.setItem(k, v); } catch (e) { /* sin almacenamiento */ } },
+  };
 
   // ------------------------------------------------------------------ modo de la pantalla
   const params = new URLSearchParams(location.search);
@@ -20,6 +25,7 @@
   const INACTIVA = 120000;       // ms sin veredictos ni tarjetas antes de volver a la pantalla de inicio
   const QR_RECIENTE = 2000;      // ms en que un QR visto en vivo aún vale para la toma
   const REINTENTOS_OCUPADO = 3;
+  const AVISO_BANDEJA = 3000;    // ms que se muestra "No veo la bandeja" antes de volver a esperar
 
   const ICONO = { verde: "✓", amarillo: "!", rojo: "✕" };
   const ESTADO = {
@@ -36,7 +42,7 @@
     aviso: $("camara-aviso"), semaforo: $("semaforo"), icono: $("icono"), titulo: $("titulo"), detalle: $("detalle"),
     lectura: $("lectura"), capturar: $("btn-capturar"), siguiente: $("btn-siguiente"), corregir: $("btn-corregir"),
     buscar: $("btn-buscar"), porciones: $("porciones"), nutrientes: $("nutrientes"), total: $("total"),
-    practica: $("practica"), situacion: $("situacion"), grado: $("grado-sin-estudiante"),
+    practica: $("practica"), practicaBanda: $("practica-banda"), situacion: $("situacion"), grado: $("grado-sin-estudiante"),
     panelBuscar: $("panel-buscar"), buscarQ: $("buscar-q"), buscarGrado: $("buscar-grado"), buscarLista: $("buscar-lista"),
     panelCorregir: $("panel-corregir"), corregirLista: $("corregir-lista"), inicio: $("inicio"),
   };
@@ -56,17 +62,18 @@
   };
 
   // ------------------------------------------------------------------ preferencias guardadas
-  el.practica.checked = local.get("np.practica", "0") === "1";
-  el.situacion.value = local.get("np.situacion", "completa");
+  el.practica.checked = sesion.get("np.practica", "0") === "1";
+  el.situacion.value = sesion.get("np.situacion", "completa");
   el.grado.value = local.get("np.grado", "primaria");
   el.buscarGrado.value = el.grado.value;
-  el.practica.addEventListener("change", () => { local.set("np.practica", el.practica.checked ? "1" : "0"); ajustarBotones(); });
-  el.situacion.addEventListener("change", () => local.set("np.situacion", el.situacion.value));
+  el.practica.addEventListener("change", () => { sesion.set("np.practica", el.practica.checked ? "1" : "0"); ajustarBotones(); });
+  el.situacion.addEventListener("change", () => sesion.set("np.situacion", el.situacion.value));
   el.grado.addEventListener("change", () => { local.set("np.grado", el.grado.value); el.buscarGrado.value = el.grado.value; });
 
   function ajustarBotones() {
     // En la estación no hay botón de captura, salvo en práctica (no hay tarjeta que dispare la toma).
     el.capturar.hidden = ESTACION && !el.practica.checked;
+    el.practicaBanda.hidden = !el.practica.checked; // aviso visible para la docente; la capa del niño no cambia
   }
   ajustarBotones();
   el.pantalla.classList.toggle("np-v-es-estacion", ESTACION);
@@ -220,6 +227,7 @@
         setTimeout(() => capturar(intento + 1), 1500);
         return;
       }
+      if (j && j.error === "bandeja") return mostrarAviso(j.mensaje, AVISO_BANDEJA);
       return mostrarAviso(j && j.mensaje ? j.mensaje : "No se pudo leer la bandeja. Intenta de nuevo.");
     }
     s.qrLeido = null; // cada veredicto consume la tarjeta, en ambos modos
@@ -256,14 +264,14 @@
     mostrarLectura();
   }
 
-  function mostrarAviso(mensaje) {
+  function mostrarAviso(mensaje, espera = 3500) {
     cambiarEstado("aviso");
     el.semaforo.dataset.semaforo = "aviso";
     el.icono.textContent = "!";
     el.titulo.textContent = mensaje;
     el.detalle.textContent = "";
     s.qrUsado = null;
-    s.temporizador = setTimeout(volver, 3500);
+    s.temporizador = setTimeout(volver, espera);
   }
 
   function mostrarVeredicto(j) {
@@ -290,6 +298,8 @@
     };
     const j = s.veredicto;
     if (j && j.tarjeta_invalida) return t("✕", "Tarjeta no válida: no se guardó a nombre de nadie.", "np-v-mal");
+    if (j && j.estudiante && j.guardado === false && !el.practica.checked)
+      return t("!", `Sin consentimiento: no se guardó · ${j.estudiante.nombre}`, "np-v-mal");
     if (j && j.estudiante) return t("✓", `${j.estudiante.nombre} · ${j.estudiante.grado}`, "np-v-bien");
     if (j) return t("▢", "Sin estudiante: no se guardó a nombre de nadie.");
     if (s.elegido) return t("✓", `Elegido: ${s.elegido.nombre}`, "np-v-bien");
