@@ -1,0 +1,38 @@
+/* Sistema de diseño NutriPAE (v1 conservado) */
+:root {
+  --ink: #1D2622; --ink2: #4A554F; --muted: #8A8577;
+  --line: #E3DDD1; --line2: #EFEAE0;
+  --bg: #F6F2EA; --surf: #FFFDF9;
+  --g700: #145236; --g600: #1F7A4D; --g100: #E3F0E7; --g-dark: #143B2A;
+  --cam: #1A201D; --sobra: #F2B53A;
+  --ok: #1F7A4D; --bajo: #E8A317; --falta: #B8322A; --no-apto: #7A2348;
+  --mono: 'Atkinson Hyperlegible Mono', ui-monospace, monospace;
+  --sans: 'Atkinson Hyperlegible Next', system-ui, sans-serif;
+  --boton-kiosco: 88px;
+}
+
+@keyframes npScan { 0% { top: 6% } 50% { top: 90% } 100% { top: 6% } }
+@keyframes npSpin { to { transform: rotate(360deg) } }
+@keyframes npPulse { 0%, 100% { opacity: 1 } 50% { opacity: .35 } }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); }
+.np { font-family: var(--sans); color: var(--ink); }
+.np-mono { font-family: var(--mono); }
+.np-card { background: var(--surf); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+.np-h { font-size: 16px; font-weight: 800; }
+.np-sub { font-size: 12px; color: var(--ink2); }
+
+/* botón de kiosco (objetivo táctil 88 px) */
+.np-btn { min-height: var(--boton-kiosco); border-radius: 18px; border: none; background: var(--g700); color: #fff;
+  font: 800 clamp(22px, 2vw, 28px)/1.1 var(--sans); padding: 0 24px; cursor: pointer; }
+.np-btn:hover, .np-btn:active { background: #0E3D28; }
+.np-btn:active { transform: scale(.97); }
+.np-btn:disabled { background: var(--line); color: var(--muted); cursor: default; }
+.np-btn-sec { min-height: var(--boton-kiosco); border-radius: 18px; border: 3px solid var(--ink); background: var(--surf);
+  color: var(--ink); font: 800 clamp(17px, 1.5vw, 21px)/1.15 var(--sans); padding: 0 24px; cursor: pointer; }
+.np-btn-sec:hover { background: #EDE7DB; }
+
+/* panel de cámara y barra de controles */
+.np-camara { background: var(--cam); border-radius: 20px; padding: 14px; color: #E3F0E7; }
+.np-controles { background: var(--surf); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; }

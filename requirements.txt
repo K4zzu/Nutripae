@@ -1,9 +1,18 @@
-streamlit>=1.50
-pandas>=2.0
-pillow>=10.1
-numpy>=1.26
-python-dotenv>=1.0
-openai>=1.40               # IA de visión (proveedor por defecto del piloto)
+fastapi
+uvicorn[standard]
+jinja2
+python-multipart
+itsdangerous
+bcrypt
+openpyxl
+qrcode[pil]
+reportlab
+httpx
+pytest
+openai
+pillow
+numpy
+python-dotenv
 
 # Opcionales según el proveedor de IA que uses:
 # anthropic>=0.40          # IA de visión con Claude
