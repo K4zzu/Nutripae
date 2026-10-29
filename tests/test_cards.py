@@ -91,3 +91,15 @@ def test_reimportar_sin_consentimiento_anula_la_tarjeta(settings):
     cards.asignar_tarjeta(con, 1)
     students.importar_excel(con, xlsx([("A1", "Ana", "3°", "3-A", "IE", "no")]))
     assert cards.tarjeta_activa(con, 1) is None
+
+
+def test_qr_contiene_solo_el_codigo(settings, monkeypatch):
+    con = db.conectar(settings.db_path)
+    students.importar_excel(con, xlsx([("A1", "Ana Pérez", "3°", "3-A", "IE Santa Librada", "sí")]))
+    cargas = []
+    original = cards.qrcode.make
+    monkeypatch.setattr(cards.qrcode, "make", lambda datos, *a, **k: (cargas.append(datos), original(datos, *a, **k))[1])
+    cards.pdf_curso(con, "IE Santa Librada", "primaria", "3-A")
+    assert cargas == [cards.tarjeta_activa(con, 1)]
+    for texto in ("Ana", "Pérez", "primaria", "3-A", "Santa Librada"):
+        assert all(texto not in c for c in cargas)
