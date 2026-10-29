@@ -1,13 +1,14 @@
 """Estudiantes: administración (carga, consentimiento, baja) y API de búsqueda."""
 from __future__ import annotations
 
+import re
 from datetime import date
 from itertools import groupby
 
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 
-from nutripae import auth, students
+from nutripae import auth, cards, students
 from nutripae.web.routes_verify import ROLES_VERIFICAR
 
 router = APIRouter()
@@ -16,7 +17,8 @@ router = APIRouter()
 def _vista(request: Request, mensaje: str | None = None, error: str | None = None, status: int = 200):
     con = request.app.state.con
     filas = con.execute(
-        "SELECT e.*, EXISTS(SELECT 1 FROM tarjetas t WHERE t.estudiante_id=e.id AND t.activa=1) AS tiene_tarjeta "
+        "SELECT e.*, (SELECT t.codigo FROM tarjetas t WHERE t.estudiante_id=e.id AND t.activa=1 "
+        "ORDER BY t.creada DESC, t.rowid DESC LIMIT 1) AS codigo_tarjeta "
         "FROM estudiantes e WHERE e.activo=1 ORDER BY e.sede, e.grado, e.grupo, e.orden, e.id").fetchall()
     sedes = [(sede, [(grupo, list(est)) for grupo, est in
                      groupby(lista, key=lambda e: (e["grado"], e["grupo"]))])
@@ -60,6 +62,27 @@ def consentimiento(estudiante_id: int, request: Request, valor: str = Form("0"),
 @router.post("/admin/estudiantes/{estudiante_id}/baja")
 def baja(estudiante_id: int, request: Request, usuario=Depends(auth.requiere("admin"))):
     students.dar_de_baja(request.app.state.con, estudiante_id)
+    return RedirectResponse("/admin/estudiantes", status_code=303)
+
+
+def _ascii(texto: str) -> str:
+    import unicodedata
+    plano = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode()
+    return re.sub(r"[^A-Za-z0-9-]+", "_", plano).strip("_") or "x"
+
+
+@router.get("/admin/tarjetas.pdf")
+def tarjetas_pdf(request: Request, sede: str, grado: str, grupo: str,
+                 usuario=Depends(auth.requiere("admin"))):
+    datos = cards.pdf_curso(request.app.state.con, sede, grado, grupo)
+    nombre = f"tarjetas_{_ascii(sede)}_{_ascii(grado)}_{_ascii(grupo)}.pdf"
+    return Response(datos, media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
+
+
+@router.post("/admin/tarjetas/{codigo}/anular")
+def tarjeta_anular(codigo: str, request: Request, usuario=Depends(auth.requiere("admin"))):
+    cards.anular_tarjeta(request.app.state.con, codigo)
     return RedirectResponse("/admin/estudiantes", status_code=303)
 
 
