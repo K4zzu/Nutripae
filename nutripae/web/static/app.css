@@ -36,3 +36,15 @@ body { margin: 0; background: var(--bg); }
 /* panel de cámara y barra de controles */
 .np-camara { background: var(--cam); border-radius: 20px; padding: 14px; color: #E3F0E7; }
 .np-controles { background: var(--surf); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; }
+
+/* inicio de sesión */
+.np-entrar { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.np-entrar-caja { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 10px; padding: 28px; }
+.np-entrar-caja h1 { margin: 0 0 8px; font-size: 28px; font-weight: 800; color: var(--g700); }
+.np-entrar-caja label { font-size: 14px; font-weight: 700; color: var(--ink2); }
+.np-entrar-caja input { min-height: 52px; padding: 0 14px; border: 2px solid var(--line); border-radius: 12px;
+  background: #fff; font: 500 18px var(--sans); color: var(--ink); }
+.np-entrar-caja input:focus { outline: 3px solid var(--g600); border-color: var(--g600); }
+.np-entrar-caja .np-btn { margin-top: 12px; }
+.np-error { margin: 0; padding: 10px 12px; border-radius: 12px; background: #F8E3E1; color: var(--falta);
+  font-weight: 700; }
