@@ -1,15 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Entrar · NutriPAE{% endblock %}
 {% block content %}
-<main class="np-entrar">
+<main class="np-entrar np-manchas">
   <form method="post" action="/entrar" class="np-card np-entrar-caja">
-    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 48 48" aria-hidden="true">
-      <rect x="1" y="19" width="5" height="10" rx="2.5" fill="#145236"/>
-      <rect x="42" y="19" width="5" height="10" rx="2.5" fill="#145236"/>
-      <rect x="4" y="9" width="40" height="30" rx="8" fill="#1F7A4D"/>
-      <path d="M15 24.5l6 6 12-13" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    <h1>NutriPAE</h1>
+    <h1><img src="/static/img/logo-600.png" alt="NutriPAE" width="240"></h1>
+    <p class="np-entrar-saludo">¡Hola! Entra para revisar los platos.</p>
     {% if error %}<p class="np-error" role="alert"><span aria-hidden="true">✕</span> {{ error }}</p>{% endif %}
     <label for="usuario">Usuario</label>
     <input id="usuario" name="usuario" type="text" autocomplete="username" autocapitalize="none" required autofocus>

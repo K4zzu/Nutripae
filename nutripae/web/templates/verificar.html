@@ -1,6 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Verificación · NutriPAE{% endblock %}
 {% block content %}
+<!-- Pantalla de inicio de la estación: el toque pide la cámara dentro del gesto -->
+<div id="inicio" class="np-inicio np-manchas" role="button" tabindex="0" hidden>
+  <img src="/static/img/logo-600.png" alt="NutriPAE">
+  <p>Toca para comenzar</p>
+</div>
 <main class="np-v" id="pantalla" data-estado="esperando">
 
   <!-- Capa del niño: grande, legible a dos metros -->
@@ -91,10 +96,6 @@
       <ul id="corregir-lista" class="np-v-lista"></ul>
     </div>
 
-    <form method="post" action="/salir" class="np-v-salir">
-      <span class="np-sub">{{ usuario["nombre"] or usuario["usuario"] }}</span>
-      <button type="submit" class="np-v-enlace">Salir</button>
-    </form>
   </section>
 </main>
 <canvas id="lienzo" hidden></canvas>

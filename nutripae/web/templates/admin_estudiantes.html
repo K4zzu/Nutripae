@@ -36,7 +36,7 @@
           <td>{% if e.tiene_tarjeta %}<span aria-hidden="true">✓</span> Con tarjeta{% else %}<span aria-hidden="true">—</span> Sin tarjeta{% endif %}</td>
           <td>
             <form method="post" action="/admin/estudiantes/{{ e.id }}/baja">
-              <button type="submit" class="np-btn-sec">Dar de baja</button>
+              <button type="submit" class="np-btn-sec np-admin-baja">Dar de baja</button>
             </form>
           </td>
         </tr>

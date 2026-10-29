@@ -128,7 +128,7 @@ def test_sin_foto_guardada_devuelve_imagen_en_linea(client, settings):
     j = client.post("/api/verificar", files={"foto": foto()}, data={"modo": "demo", "escenario": "no_apto"}).json()
     assert j["foto_url"].startswith("data:image/jpeg;base64,")
     p = next(p for p in j["porciones"] if p["estado"] == "no_apto")
-    assert p["color"] == "#7A2348" and p["grupo_label"]
+    assert p["color"] == "#B81F3C" and p["grupo_label"]
 
 
 def test_corregir_invalido_da_400(client, settings):

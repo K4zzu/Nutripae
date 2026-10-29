@@ -11,12 +11,12 @@ GRUPO_LABEL = {
     "otro": "Otro",
 }
 GRUPO_COLOR = {
-    "proteina": "#A6572E",
-    "energetico": "#E8A317",
-    "verdura": "#1F7A4D",
-    "fruta": "#D96C8E",
-    "bebida": "#4A7FB5",
-    "otro": "#8A8577",
+    "proteina": "#EE3B5A",
+    "energetico": "#FAC344",
+    "verdura": "#23D098",
+    "fruta": "#4C17C1",
+    "bebida": "#1C3F9E",
+    "otro": "#9A96B3",
 }
 
 _GRUPO_TABLA = {"cereal": "energetico", "tuberculo": "energetico"}

@@ -17,6 +17,7 @@
   const QR_ESTABLE = 1000;       // ms que el mismo QR debe verse antes de capturar
   const ESPERA_VEREDICTO = 8000; // ms que el veredicto queda en pantalla en la estación
   const SIN_TARJETA = 5000;      // ms sin QR antes de pedir "Acerca tu tarjeta"
+  const INACTIVA = 120000;       // ms sin veredictos ni tarjetas antes de volver a la pantalla de inicio
   const QR_RECIENTE = 2000;      // ms en que un QR visto en vivo aún vale para la toma
   const REINTENTOS_OCUPADO = 3;
 
@@ -37,8 +38,9 @@
     buscar: $("btn-buscar"), porciones: $("porciones"), nutrientes: $("nutrientes"), total: $("total"),
     practica: $("practica"), situacion: $("situacion"), grado: $("grado-sin-estudiante"),
     panelBuscar: $("panel-buscar"), buscarQ: $("buscar-q"), buscarGrado: $("buscar-grado"), buscarLista: $("buscar-lista"),
-    panelCorregir: $("panel-corregir"), corregirLista: $("corregir-lista"),
+    panelCorregir: $("panel-corregir"), corregirLista: $("corregir-lista"), inicio: $("inicio"),
   };
+  const token = (nombre) => getComputedStyle(document.documentElement).getPropertyValue(nombre).trim();
   const iconoEspera = el.icono.innerHTML;
 
   const s = {
@@ -50,6 +52,7 @@
     qrUsado: null,         // QR del último veredicto: no vuelve a disparar mientras siga a la vista
     elegido: null,         // estudiante elegido con Buscar
     veredicto: null, alimentos: null, temporizador: null,
+    actividad: Date.now(), // último veredicto, tarjeta vista o toque
   };
 
   // ------------------------------------------------------------------ preferencias guardadas
@@ -120,6 +123,8 @@
     const ahora = Date.now();
     if (codigo) {
       s.ultimoQR = ahora;
+      s.actividad = ahora;
+      if (!el.inicio.hidden) ocultarInicio(); // una tarjeta también despierta la estación
       if (codigo !== s.qrVisto) { s.qrVisto = codigo; s.qrDesde = ahora; }
     } else {
       s.qrVisto = null;
@@ -135,6 +140,8 @@
     }
 
     if (!ESTACION) return;
+    if (!el.inicio.hidden) return; // en la pantalla de inicio no se pide tarjeta ni se captura
+    if (s.estado === "esperando" && ahora - s.actividad > INACTIVA) { mostrarInicio(); return; }
     if (s.estado === "esperando") {
       if (codigo && codigo !== s.qrUsado && ahora - s.qrDesde >= QR_ESTABLE) {
         capturar();
@@ -260,6 +267,7 @@
   function mostrarVeredicto(j) {
     cambiarEstado("veredicto");
     s.veredicto = j;
+    s.actividad = Date.now();
     el.pantalla.classList.remove("np-v-pide-tarjeta");
     el.semaforo.dataset.semaforo = j.semaforo;
     el.icono.textContent = ICONO[j.semaforo] || "!";
@@ -343,7 +351,7 @@
     const ctx = c.getContext("2d");
     ctx.clearRect(0, 0, c.width, c.height);
     if (!p || !p.poligono) return;
-    ctx.lineWidth = 6; ctx.strokeStyle = "#FFFFFF"; ctx.setLineDash([10, 6]);
+    ctx.lineWidth = 6; ctx.strokeStyle = token("--surf") || "white"; ctx.setLineDash([10, 6]);
     ctx.beginPath();
     p.poligono.forEach(([x, y], i) => (i ? ctx.lineTo : ctx.moveTo).call(ctx, x * c.width, y * c.height));
     ctx.closePath(); ctx.stroke();
@@ -486,9 +494,32 @@
   document.querySelectorAll("[data-cerrar]").forEach((b) =>
     b.addEventListener("click", () => { $(b.dataset.cerrar).hidden = true; }));
 
+  // ------------------------------------------------------------------ pantalla de inicio (solo estación)
+  function mostrarInicio() {
+    el.inicio.hidden = false;
+    el.inicio.focus({ preventScroll: true });
+  }
+  function ocultarInicio() {
+    el.inicio.hidden = true;
+    s.actividad = Date.now();
+    s.ultimoQR = Date.now();
+    quitarPedido();
+  }
+  function tocarInicio() {
+    ocultarInicio();
+    if (!s.camara) iniciarCamara(); // getUserMedia dentro del gesto del toque
+  }
+  el.inicio.addEventListener("click", tocarInicio);
+  el.inicio.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); tocarInicio(); }
+  });
+  // la docente usando la pantalla también cuenta como actividad
+  el.pantalla.addEventListener("pointerdown", () => { s.actividad = Date.now(); });
+
   // ------------------------------------------------------------------ arranque
   textosEspera();
   mostrarLectura();
-  iniciarCamara();
+  if (ESTACION) mostrarInicio();
+  else iniciarCamara();
   setInterval(cicloQR, INTERVALO_QR);
 })();

@@ -10,7 +10,7 @@ from .foods import GRUPO_COLOR
 from .nutrition import TABLA
 from .vision import Deteccion
 
-COLOR_NO_APTO = "#7A2348"
+COLOR_NO_APTO = "#B81F3C"
 _ALFA_RELLENO = 115  # ~45 %
 
 

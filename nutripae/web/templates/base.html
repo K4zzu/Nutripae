@@ -4,14 +4,27 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}NutriPAE{% endblock %}</title>
+  <link rel="icon" type="image/png" href="/static/img/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;600&family=Atkinson+Hyperlegible+Next:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/app.css">
 </head>
 <body class="np">
-  {% if request and request.state.roles and "admin" in request.state.roles %}
-  <nav class="np-nav" aria-label="Administración"><a href="/verificar">Verificar</a> <a href="/admin/estudiantes">Estudiantes</a></nav>
+  {% if request and request.state.usuario %}
+  <header class="np-nav">
+    <a href="/verificar" class="np-nav-logo"><img src="/static/img/logo-600.png" alt="NutriPAE, ir a verificar" height="40"></a>
+    <nav class="np-nav-enlaces" aria-label="Principal">
+      <a href="/verificar"{% if request.url.path == "/verificar" %} aria-current="page"{% endif %}>Verificar</a>
+      {% if request.state.roles and "admin" in request.state.roles %}
+      <a href="/admin/estudiantes"{% if request.url.path.startswith("/admin/estudiantes") %} aria-current="page"{% endif %}>Estudiantes</a>
+      {% endif %}
+    </nav>
+    <form method="post" action="/salir" class="np-nav-salir">
+      <span class="np-nav-usuario">{{ request.state.usuario["nombre"] or request.state.usuario["usuario"] }}</span>
+      <button type="submit" class="np-nav-boton">Salir</button>
+    </form>
+  </header>
   {% endif %}
   {% block content %}{% endblock %}
 </body>
