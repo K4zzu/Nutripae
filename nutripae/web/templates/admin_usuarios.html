@@ -8,6 +8,32 @@
   {% if mensaje %}<p class="np-ok" role="status"><span aria-hidden="true">✓</span> {{ mensaje }}</p>{% endif %}
   {% if error %}<p class="np-error" role="alert"><span aria-hidden="true">✕</span> {{ error }}</p>{% endif %}
 
+  {% if editar %}
+  <form method="post" action="/admin/usuarios/{{ editar.id }}/editar" class="np-card np-admin-form">
+    <h2>Editar a {{ editar.usuario }}</h2>
+    <p class="np-sub">{{ editar.nombre }}</p>
+    <fieldset>
+      <legend>Roles</legend>
+      {% for r in roles %}
+      <label class="np-check"><input type="checkbox" name="roles" value="{{ r }}"{% if r in editar.roles %} checked{% endif %}> {{ r|capitalize }}</label>
+      {% endfor %}
+    </fieldset>
+    <fieldset>
+      <legend>Sedes</legend>
+      {% for s in sedes %}
+      <label class="np-check"><input type="checkbox" name="sedes" value="{{ s }}"{% if s in editar.sedes %} checked{% endif %}> {{ s }}</label>
+      {% endfor %}
+      <label for="editar_otra_sede">Otra sede</label>
+      <input id="editar_otra_sede" name="otra_sede" autocomplete="off">
+    </fieldset>
+    <label for="editar_contrasena">Nueva contraseña (opcional, mínimo 6 caracteres)</label>
+    <input id="editar_contrasena" name="contrasena" type="password" minlength="6" autocomplete="new-password">
+    <label class="np-check"><input type="checkbox" name="activo" value="1"{% if editar.activo %} checked{% endif %}> Activo</label>
+    <button type="submit" class="np-btn">Guardar cambios</button>
+    <a class="np-btn-sec" href="/admin/usuarios">Cancelar</a>
+  </form>
+  {% endif %}
+
   <form method="post" action="/admin/usuarios" class="np-card np-admin-form">
     <h2>Nuevo usuario</h2>
     <label for="usuario">Usuario</label>
@@ -48,6 +74,7 @@
           <td>{{ u.sedes|join(", ") or "—" }}</td>
           <td>{% if u.activo %}<span aria-hidden="true">✓</span> Activo{% else %}<span aria-hidden="true">✕</span> Inactivo{% endif %}</td>
           <td>
+            <a class="np-btn-sec" href="/admin/usuarios/{{ u.id }}/editar">Editar</a>
             {% if u.activo and u.id != yo %}
             <form method="post" action="/admin/usuarios/{{ u.id }}/desactivar">
               <button type="submit" class="np-btn-sec np-admin-baja">Desactivar</button>

@@ -157,3 +157,81 @@ def test_corregir_acepta_un_extra(client, settings):
     r = client.post(f"/api/verificaciones/{j['id']}/corregir", json={"indice": 0, "alimento": "mazamorra"})
     assert r.status_code == 200 and r.json()["porciones"][0]["nombre"] == "Mazamorra"
     assert r.json()["porciones"][0]["grupo"] == "bebida"
+
+
+# --- edición de usuarios ---------------------------------------------------------------------
+
+def _otro(settings, usuario="doc", roles=("docente",), sedes=("IE",), activo=True):
+    con = db.conectar(settings.db_path)
+    uid = auth.crear_usuario(con, usuario, "Docente Uno", "clave1", list(roles), list(sedes))
+    if not activo:
+        con.execute("UPDATE usuarios SET activo=0 WHERE id=?", (uid,)); con.commit()
+    return uid
+
+
+def _yo(settings, usuario="u1"):
+    return db.conectar(settings.db_path).execute("SELECT id FROM usuarios WHERE usuario=?", (usuario,)).fetchone()[0]
+
+
+def test_editar_cambia_roles_y_sedes(client, settings):
+    uid = _otro(settings)
+    login(client, settings, ["admin"])
+    html = client.get(f"/admin/usuarios/{uid}/editar").text
+    assert "Editar a doc" in html and f'action="/admin/usuarios/{uid}/editar"' in html
+    r = client.post(f"/admin/usuarios/{uid}/editar", data={"roles": ["nutricionista", "docente"], "sedes": ["IE"],
+                                                         "otra_sede": "Sede Norte", "activo": "1"},
+                    follow_redirects=False)
+    assert r.status_code == 302 and r.headers["location"] == "/admin/usuarios?actualizado=1"
+    con = db.conectar(settings.db_path)
+    assert auth.roles_de(con, uid) == {"nutricionista", "docente"}
+    assert auth.sedes_de(con, uid) == {"IE", "Sede Norte"}
+    assert auth.verificar(con, "doc", "clave1") is not None  # sin contraseña nueva se conserva
+
+
+def test_editar_restablece_contrasena(client, settings):
+    uid = _otro(settings)
+    login(client, settings, ["admin"])
+    assert client.post(f"/admin/usuarios/{uid}/editar", data={"roles": ["docente"], "sedes": ["IE"], "activo": "1",
+                                                            "contrasena": "nueva123"},
+                       follow_redirects=False).status_code == 302
+    client.post("/salir")
+    from fastapi.testclient import TestClient
+    otro = TestClient(client.app)
+    assert otro.post("/entrar", data={"usuario": "doc", "contrasena": "clave1"}, follow_redirects=False).status_code != 302
+    assert otro.post("/entrar", data={"usuario": "doc", "contrasena": "nueva123"}, follow_redirects=False).status_code == 302
+
+
+def test_editar_contrasena_corta_da_400(client, settings):
+    uid = _otro(settings)
+    login(client, settings, ["admin"])
+    r = client.post(f"/admin/usuarios/{uid}/editar", data={"roles": ["docente"], "activo": "1", "contrasena": "abc"})
+    assert r.status_code == 400 and "al menos 6" in r.text
+
+
+def test_editar_reactiva(client, settings):
+    uid = _otro(settings, activo=False)
+    login(client, settings, ["admin"])
+    client.post(f"/admin/usuarios/{uid}/editar", data={"roles": ["docente"], "sedes": ["IE"], "activo": "1"})
+    assert db.conectar(settings.db_path).execute("SELECT activo FROM usuarios WHERE id=?", (uid,)).fetchone()[0] == 1
+
+
+def test_admin_no_se_quita_admin_ni_se_desactiva(client, settings):
+    login(client, settings, ["admin"])
+    yo = _yo(settings)
+    r = client.post(f"/admin/usuarios/{yo}/editar", data={"roles": ["docente"], "activo": "1"})
+    assert r.status_code == 400 and "rol de administrador" in r.text
+    r = client.post(f"/admin/usuarios/{yo}/editar", data={"roles": ["admin"]})
+    assert r.status_code == 400 and "desactivar tu propio usuario" in r.text
+    con = db.conectar(settings.db_path)
+    assert auth.roles_de(con, yo) == {"admin"}
+    assert con.execute("SELECT activo FROM usuarios WHERE id=?", (yo,)).fetchone()[0] == 1
+
+
+def test_editar_solo_admin_y_404(client, settings):
+    uid = _otro(settings)
+    login(client, settings, ["admin"])
+    assert client.get("/admin/usuarios/9999/editar").status_code == 404
+    client.post("/salir")
+    login(client, settings, ["docente"], usuario="doc2")
+    assert client.get(f"/admin/usuarios/{uid}/editar").status_code == 403
+    assert client.post(f"/admin/usuarios/{uid}/editar", data={"roles": ["admin"], "activo": "1"}).status_code == 403

@@ -29,6 +29,29 @@ def crear_usuario(con: sqlite3.Connection, usuario: str, nombre: str, contrasena
     return uid
 
 
+def actualizar_usuario(con: sqlite3.Connection, usuario_id: int, *, roles: list[str], sedes: list[str],
+                       activo: bool, contrasena: str | None = None) -> None:
+    """Reemplaza roles y sedes, fija si está activo y, si se da, cambia la contraseña."""
+    invalidos = set(roles) - ROLES
+    if invalidos:
+        raise ValueError(f"Rol no válido: {', '.join(sorted(invalidos))}")
+    try:
+        con.execute("UPDATE usuarios SET activo=? WHERE id=?", (1 if activo else 0, usuario_id))
+        if contrasena:
+            con.execute("UPDATE usuarios SET hash=? WHERE id=?",
+                        (bcrypt.hashpw(contrasena.encode(), bcrypt.gensalt()).decode(), usuario_id))
+        con.execute("DELETE FROM usuario_roles WHERE usuario_id=?", (usuario_id,))
+        con.execute("DELETE FROM usuario_sedes WHERE usuario_id=?", (usuario_id,))
+        con.executemany("INSERT INTO usuario_roles(usuario_id, rol) VALUES (?,?)",
+                        [(usuario_id, r) for r in sorted(set(roles))])
+        con.executemany("INSERT INTO usuario_sedes(usuario_id, sede) VALUES (?,?)",
+                        [(usuario_id, s) for s in sorted(set(sedes))])
+        con.commit()
+    except Exception:
+        con.rollback()
+        raise
+
+
 def verificar(con: sqlite3.Connection, usuario: str, contrasena: str) -> sqlite3.Row | None:
     fila = con.execute("SELECT * FROM usuarios WHERE usuario=?", (usuario,)).fetchone()
     if fila is None or not fila["activo"]:

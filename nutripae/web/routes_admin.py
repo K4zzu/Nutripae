@@ -4,7 +4,7 @@ from __future__ import annotations
 import copy
 import re
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
 from nutripae import auth, db, foods
@@ -34,20 +34,68 @@ def _usuarios(con) -> list[dict]:
 
 
 def _vista_usuarios(request: Request, mensaje: str | None = None, error: str | None = None,
-                    status: int = 200, previo: dict | None = None):
+                    status: int = 200, previo: dict | None = None, editar: dict | None = None):
     con = request.app.state.con
     sedes = [f["sede"] for f in con.execute(
         "SELECT DISTINCT sede FROM estudiantes WHERE sede IS NOT NULL AND sede<>'' ORDER BY sede")]
+    if editar is not None:  # las sedes del usuario que no tienen estudiantes también se ofrecen
+        sedes = sorted(set(sedes) | set(editar["sedes"]))
     return request.app.state.templates.TemplateResponse(
         request, "admin_usuarios.html",
         {"usuarios": _usuarios(con), "roles": sorted(auth.ROLES), "sedes": sedes,
-         "mensaje": mensaje, "error": error, "previo": previo or {}, "yo": request.state.usuario["id"]},
+         "mensaje": mensaje, "error": error, "previo": previo or {}, "yo": request.state.usuario["id"],
+         "editar": editar},
         status_code=status)
+
+
+def _usuario(con, usuario_id: int) -> dict:
+    u = next((u for u in _usuarios(con) if u["id"] == usuario_id), None)
+    if u is None:
+        raise HTTPException(status_code=404)
+    return u
 
 
 @router.get("/admin/usuarios")
 def usuarios(request: Request, usuario=Depends(auth.requiere("admin"))):
-    return _vista_usuarios(request, mensaje="Usuario desactivado." if "desactivado" in request.query_params else None)
+    q = request.query_params
+    mensaje = "Usuario desactivado." if "desactivado" in q else "Usuario actualizado." if "actualizado" in q else None
+    return _vista_usuarios(request, mensaje=mensaje)
+
+
+@router.get("/admin/usuarios/{usuario_id}/editar")
+def editar_usuario(usuario_id: int, request: Request, usuario=Depends(auth.requiere("admin"))):
+    return _vista_usuarios(request, editar=_usuario(request.app.state.con, usuario_id))
+
+
+@router.post("/admin/usuarios/{usuario_id}/editar")
+async def guardar_usuario(usuario_id: int, request: Request, usuario=Depends(auth.requiere("admin"))):
+    con = request.app.state.con
+    actual = _usuario(con, usuario_id)
+    f = await request.form()
+    roles = f.getlist("roles")
+    otra = (f.get("otra_sede") or "").strip()
+    sedes = [s.strip() for s in f.getlist("sedes") if s.strip()] + ([otra] if otra else [])
+    activo = f.get("activo") is not None
+    contrasena = f.get("contrasena") or ""
+
+    def error(msg: str):
+        return _vista_usuarios(request, error=msg, status=400,
+                               editar={**actual, "roles": roles, "sedes": sedes, "activo": activo})
+
+    if not roles:
+        return error("Elige al menos un rol.")
+    if contrasena and len(contrasena) < 6:
+        return error("La contraseña debe tener al menos 6 caracteres.")
+    if usuario_id == usuario["id"] and "admin" not in roles:
+        return error("No puedes quitarte el rol de administrador.")
+    if usuario_id == usuario["id"] and not activo:
+        return error("No puedes desactivar tu propio usuario.")
+    try:
+        auth.actualizar_usuario(con, usuario_id, roles=roles, sedes=sedes, activo=activo,
+                                contrasena=contrasena or None)
+    except ValueError as e:
+        return error(str(e))
+    return RedirectResponse("/admin/usuarios?actualizado=1", status_code=302)
 
 
 @router.post("/admin/usuarios")
