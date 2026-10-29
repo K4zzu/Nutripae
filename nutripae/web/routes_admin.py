@@ -165,6 +165,8 @@ def agregar_alimento(request: Request, clave: str = Form(""), nombre: str = Form
     if not _SLUG.match(clave):
         return _vista_parametros(request, status=400, error="El identificador usa solo letras minúsculas, "
                                  "números y guion bajo (por ejemplo: arepa_queso).")
+    if clave == "otro" or clave.startswith("falta_"):
+        return _vista_parametros(request, status=400, error="Ese identificador está reservado.")
     if not nombre:
         return _vista_parametros(request, status=400, error="Escribe el nombre del alimento.")
     if grupo not in foods.GRUPOS:

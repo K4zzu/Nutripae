@@ -13,10 +13,20 @@ def test_admin_crea_usuario_y_docente_no_puede(client, settings):
 
 def test_parametros_cambian_el_veredicto(client, settings):
     login(client, settings, ["admin"])
-    client.post("/admin/parametros", data={"factor_corto": "0.95", "factor_excedido": "1.8"})
-    j = client.post("/api/verificar", files={"foto": foto()}, data={"modo": "demo", "escenario": "completa", "grado": "primaria"}).json()
-    assert j["semaforo"] in ("amarillo", "verde")  # el valor se lee de la BD sin reiniciar
-    assert db.param(db.conectar(settings.db_path), "umbrales", {})["factor_corto"] == 0.95
+    datos = {"modo": "demo", "escenario": "completa", "grado": "primaria"}
+
+    def verificar():
+        j = client.post("/api/verificar", files={"foto": foto()}, data=datos).json()
+        fila = db.conectar(settings.db_path).execute(
+            "SELECT razon_grupo FROM verificaciones WHERE id=?", (j["id"],)).fetchone()
+        return j["semaforo"], fila["razon_grupo"]
+
+    assert verificar()[0] == "verde"
+    client.post("/admin/parametros", data={"factor_corto": "0.99", "objetivo_proteina": "0.9"})
+    assert db.param(db.conectar(settings.db_path), "umbrales", {})["factor_corto"] == 0.99
+    assert verificar() == ("amarillo", "proteina")  # se lee de la BD sin reiniciar
+    client.post("/admin/parametros/restablecer")
+    assert verificar()[0] == "verde"
 
 
 def test_usuario_nuevo_queda_con_roles_y_sedes_y_aparece_en_la_lista(client, settings):
@@ -99,3 +109,51 @@ def test_admin_requiere_rol_y_menu(client, settings):
     client.post("/salir"); login(client, settings, ["admin"], usuario="adm")
     t = client.get("/admin/usuarios").text
     assert "Administración" in t and "/admin/parametros" in t
+
+
+def test_identificadores_reservados_se_rechazan(client, settings):
+    login(client, settings, ["admin"])
+    for clave in ("otro", "falta_verdura"):
+        r = client.post("/admin/parametros/alimentos", data={"clave": clave, "nombre": "X", "grupo": "fruta"})
+        assert r.status_code == 400 and "reservado" in r.text
+
+
+def _extra(settings):
+    con = db.conectar(settings.db_path)
+    db.set_param(con, "alimentos_extra", [{"clave": "mazamorra", "nombre": "Mazamorra", "grupo": "bebida"}])
+    return con
+
+
+def test_extra_llega_al_prompt_de_vision(settings):
+    from PIL import Image
+    from nutripae import vision
+    con = _extra(settings)
+    v = vision.VisionAPI("openai", api_key="x", catalogo_fn=lambda: foods.catalogo(con))
+    capturado = {}
+
+    def falso(imagen, prompt):
+        capturado["p"] = prompt
+        return '{"items": [{"alimento": "mazamorra", "bbox": [0, 0, 1, 1]}], "persona": false}'
+    v._llamar = falso
+    r = v.analizar(Image.new("RGB", (10, 10)))
+    assert "mazamorra" in capturado["p"] and r.detecciones[0].nombre == "Mazamorra"
+
+
+def test_cruzar_asigna_nombre_y_grupo_del_extra(settings):
+    from nutripae.fuse import cruzar
+    from nutripae.vision import Deteccion
+    con = _extra(settings)
+    d = Deteccion("mazamorra", "lo que sea", 80, (0, 0, .5, .5), .9, True, "")
+    p = cruzar([d], [], foods.catalogo(con))[0]
+    assert p.nombre == "Mazamorra" and p.grupo == "bebida"
+
+
+def test_corregir_acepta_un_extra(client, settings):
+    login(client, settings, ["docente"])
+    j = client.post("/api/verificar", files={"foto": foto()}, data={"modo": "demo", "escenario": "completa"}).json()
+    r = client.post(f"/api/verificaciones/{j['id']}/corregir", json={"indice": 0, "alimento": "mazamorra"})
+    assert r.status_code == 400
+    _extra(settings)
+    r = client.post(f"/api/verificaciones/{j['id']}/corregir", json={"indice": 0, "alimento": "mazamorra"})
+    assert r.status_code == 200 and r.json()["porciones"][0]["nombre"] == "Mazamorra"
+    assert r.json()["porciones"][0]["grupo"] == "bebida"
