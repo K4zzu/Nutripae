@@ -105,3 +105,13 @@ def set_param(con: sqlite3.Connection, clave: str, valor) -> None:
                 "ON CONFLICT(clave) DO UPDATE SET valor=excluded.valor",
                 (clave, json.dumps(valor)))
     con.commit()
+
+
+def estudiante(con: sqlite3.Connection, id: int) -> sqlite3.Row | None:
+    return con.execute("SELECT * FROM estudiantes WHERE id=?", (id,)).fetchone()
+
+
+def estudiante_por_tarjeta(con: sqlite3.Connection, codigo: str) -> sqlite3.Row | None:
+    return con.execute(
+        "SELECT e.* FROM tarjetas t JOIN estudiantes e ON e.id=t.estudiante_id "
+        "WHERE t.codigo=? AND t.activa=1 AND e.activo=1", (codigo,)).fetchone()
