@@ -64,6 +64,11 @@ def _respuesta(vid: int, v: Veredicto, titulo: str, detalle: str, estudiante,
     }
 
 
+def _sede_permitida(request: Request, sede: str | None) -> bool:
+    """Cada usuario solo ve sus sedes; el administrador ve todas."""
+    return "admin" in request.state.roles or (sede is not None and sede in request.state.sedes)
+
+
 def _umbrales(con):
     return lambda: db.param(con, "umbrales", UMBRALES_INICIALES)
 
@@ -145,6 +150,9 @@ class Correccion(BaseModel):
 def api_corregir(vid: int, cuerpo: Correccion, request: Request,
                  usuario=Depends(auth.requiere(*ROLES_VERIFICAR))):
     con = request.app.state.con
+    fila = con.execute("SELECT sede FROM verificaciones WHERE id=?", (vid,)).fetchone()
+    if fila is None or not _sede_permitida(request, fila["sede"]):
+        return _error(404, "no_encontrada", "No encontramos esa verificación.")
     try:
         v = verificaciones.corregir(con, vid, cuerpo.indice, cuerpo.alimento, usuario["id"])
     except verificaciones.CorreccionInvalida as e:
@@ -164,6 +172,12 @@ def api_alimentos(usuario=Depends(auth.requiere(*ROLES_VERIFICAR))) -> list[dict
 
 @router.get("/fotos/{ruta:path}")
 def fotos(ruta: str, request: Request, usuario=Depends(auth.usuario_actual)):
+    con = request.app.state.con
+    fila = con.execute("SELECT sede FROM verificaciones WHERE foto=?", (ruta,)).fetchone() or con.execute(
+        "SELECT v.sede FROM fotos_entrenamiento f JOIN verificaciones v ON v.id=f.verificacion_id "
+        "WHERE f.ruta=?", (ruta,)).fetchone()
+    if fila is None or not _sede_permitida(request, fila["sede"]):
+        raise HTTPException(status_code=404)
     base = request.app.state.settings.fotos_dir.resolve()
     destino = (base / ruta).resolve()
     if not destino.is_relative_to(base) or not destino.is_file():

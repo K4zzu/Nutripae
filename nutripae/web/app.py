@@ -19,7 +19,13 @@ BASE = Path(__file__).parent
 
 
 def _analizador(settings: Settings, con) -> Analizador | None:
-    """Analizador compartido por todas las estaciones; None si este equipo no puede analizar fotos."""
+    """Analizador compartido por todas las estaciones; None si este equipo no puede analizar fotos.
+
+    Sin proveedor no se usa la visión de práctica: un veredicto inventado nunca se guarda como real.
+    """
+    if settings.proveedor is None:
+        log.warning("Análisis con cámara no disponible: no hay servicio de visión configurado.")
+        return None
     try:
         return Analizador(vision.crear_vision(settings), segment.crear_segmentador(settings),
                           lambda: db.param(con, "umbrales", UMBRALES_INICIALES))

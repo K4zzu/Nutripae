@@ -6,7 +6,7 @@ from nutripae import db
 from nutripae.analyze import Analizador
 from nutripae.balance import UMBRALES_INICIALES
 from nutripae.segment import SegmentadorElipses
-from nutripae.vision import ResultadoVision
+from nutripae.vision import ResultadoVision, VisionDemo
 from tests.conftest import login
 
 
@@ -43,17 +43,22 @@ def test_pagina_sin_palabras_prohibidas(client, settings):
 
 # --- reglas adicionales ---------------------------------------------------------------------
 
-def _estudiante_con_tarjeta(settings, consentimiento=1):
+def _estudiante_con_tarjeta(settings, sede="IE Santa Librada"):
     con = db.conectar(settings.db_path)
     cur = con.execute("INSERT INTO estudiantes(codigo, nombre, grado, grupo, sede, orden, consentimiento) "
-                      "VALUES('E1', 'Juan Pérez', 'secundaria', '7A', 'Sede Norte', 1, ?)", (consentimiento,))
+                      "VALUES('E1', 'Juan Pérez', 'secundaria', '7A', ?, 1, 1)", (sede,))
     con.execute("INSERT INTO tarjetas(codigo, estudiante_id, activa) VALUES('QR1', ?, 1)", (cur.lastrowid,))
     con.commit()
     return cur.lastrowid
 
 
-def test_tarjeta_valida_atribuye_y_guarda_foto(client, settings):
+def _con_camara(app):
+    app.state.analizador = Analizador(VisionDemo("completa", 1), SegmentadorElipses(), UMBRALES_INICIALES)
+
+
+def test_tarjeta_valida_atribuye_y_guarda_foto(client, app, settings):
     eid = _estudiante_con_tarjeta(settings)
+    _con_camara(app)
     login(client, settings, ["docente"])
     j = client.post("/api/verificar", files={"foto": foto()},
                     data={"modo": "camara", "tarjeta": "QR1"}).json()
@@ -63,7 +68,28 @@ def test_tarjeta_valida_atribuye_y_guarda_foto(client, settings):
     r = client.get(j["foto_url"])
     assert r.status_code == 200 and r.headers["content-type"] == "image/jpeg"
     fila = db.conectar(settings.db_path).execute("SELECT sede, grado, estudiante_id FROM verificaciones").fetchone()
-    assert tuple(fila) == ("Sede Norte", "secundaria", eid)
+    assert tuple(fila) == ("IE Santa Librada", "secundaria", eid)
+
+
+def test_sin_proveedor_la_camara_no_inventa(client, settings):
+    login(client, settings, ["docente"])
+    r = client.post("/api/verificar", files={"foto": foto()}, data={"modo": "camara"})
+    assert r.status_code == 503 and r.json()["error"] == "sin_ia"
+    assert db.conectar(settings.db_path).execute("SELECT COUNT(*) FROM verificaciones").fetchone()[0] == 0
+
+
+def test_otra_sede_no_ve_foto_ni_corrige(client, app, settings):
+    _estudiante_con_tarjeta(settings, sede="IE B")
+    _con_camara(app)
+    login(client, settings, ["docente"], usuario="b", sedes=("IE B",))
+    j = client.post("/api/verificar", files={"foto": foto()}, data={"modo": "camara", "tarjeta": "QR1"}).json()
+    assert client.get(j["foto_url"]).status_code == 200
+    login(client, settings, ["docente"], usuario="a", sedes=("IE A",))
+    assert client.get(j["foto_url"]).status_code == 404
+    r = client.post(f"/api/verificaciones/{j['id']}/corregir", json={"indice": 0, "alimento": "banano"})
+    assert r.status_code == 404
+    login(client, settings, ["admin"], usuario="ad", sedes=())
+    assert client.get(j["foto_url"]).status_code == 200
 
 
 def test_sin_foto_guardada_devuelve_imagen_en_linea(client, settings):
