@@ -162,3 +162,50 @@ def test_api_siguiente(client, settings):
 def test_api_requiere_sesion(client):
     r = client.get("/api/estudiantes/buscar", follow_redirects=False)
     assert r.status_code == 302 and r.headers["location"] == "/entrar"
+
+
+# --- recarga del listado sin columna de consentimiento y códigos reutilizados -------------------
+
+def _tarjeta(con, estudiante_id, codigo="QR1"):
+    con.execute("INSERT INTO tarjetas(codigo, estudiante_id, activa) VALUES(?,?,1)", (codigo, estudiante_id))
+    con.commit()
+
+
+def test_recarga_sin_columna_conserva_consentimiento_y_tarjeta(settings):
+    con = db.conectar(settings.db_path)
+    students.importar_excel(con, xlsx([("A1", "Ana Pérez", "3°", "3-A", "IE", "sí")]))
+    i = con.execute("select id from estudiantes where codigo='A1'").fetchone()[0]
+    _tarjeta(con, i)
+    r = students.importar_excel(con, xlsx([("A1", "Ana Pérez", "4°", "4-A", "IE"), ("A9", "Nuevo Niño", "3°", "3-A", "IE")],
+                                          cab=("codigo", "nombre", "grado", "grupo", "sede")))
+    assert (r["creados"], r["actualizados"]) == (1, 1)
+    assert con.execute("select consentimiento, grupo from estudiantes where codigo='A1'").fetchone()[:] == (1, "4-A")
+    assert con.execute("select consentimiento from estudiantes where codigo='A9'").fetchone()[0] == 0
+    assert con.execute("select activa from tarjetas where codigo='QR1'").fetchone()[0] == 1
+
+
+def test_recarga_con_consentimiento_no_cancela_tarjeta(settings):
+    con = db.conectar(settings.db_path)
+    students.importar_excel(con, xlsx([("A1", "Ana Pérez", "3°", "3-A", "IE", "sí")]))
+    i = con.execute("select id from estudiantes").fetchone()[0]
+    _tarjeta(con, i)
+    students.importar_excel(con, xlsx([("A1", "Ana Pérez", "3°", "3-A", "IE", "no")]))
+    assert con.execute("select consentimiento from estudiantes").fetchone()[0] == 0
+    assert con.execute("select activa from tarjetas where codigo='QR1'").fetchone()[0] == 0
+
+
+def test_codigo_reutilizado_con_otro_nombre_no_renombra(settings):
+    con = db.conectar(settings.db_path)
+    students.importar_excel(con, xlsx([("A1", "Ana Pérez", "3°", "3-A", "IE", "sí")]))
+    r = students.importar_excel(con, xlsx([("A1", "Carlos Ruiz", "5°", "5-A", "IE", "no")]))
+    assert r["actualizados"] == 0
+    assert r["errores"] == ["Fila 2: el código ya pertenece a otro estudiante (posible código reutilizado)"]
+    assert con.execute("select nombre, grupo, consentimiento from estudiantes").fetchone()[:] == ("Ana Pérez", "3-A", 1)
+
+
+def test_mismo_nombre_normalizado_si_actualiza(settings):
+    con = db.conectar(settings.db_path)
+    students.importar_excel(con, xlsx([("A1", "Ana Pérez", "3°", "3-A", "IE", "sí")]))
+    r = students.importar_excel(con, xlsx([("A1", "  ANA   perez ", "4°", "4-B", "IE Nueva", "no")]))
+    assert r["errores"] == [] and r["actualizados"] == 1
+    assert con.execute("select grupo, sede, consentimiento from estudiantes").fetchone()[:] == ("4-B", "IE Nueva", 0)

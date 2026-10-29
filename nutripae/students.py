@@ -31,6 +31,11 @@ def _norm(texto) -> str:
     return _sin_tildes(str(texto or "").strip()).lower()
 
 
+def _nombre_norm(texto) -> str:
+    """Nombre comparable: sin mayúsculas, sin tildes y con los espacios colapsados."""
+    return " ".join(_norm(texto).split())
+
+
 def _texto(valor) -> str:
     """Celda a texto; los números enteros de Excel (1023.0) pierden el decimal."""
     if valor is None:
@@ -82,8 +87,10 @@ def importar_excel(con: sqlite3.Connection, ruta_o_bytes, *, hash_documento: boo
         i = idx.get(col)
         return _texto(fila[i]) if i is not None and i < len(fila) else ""
 
+    hay_consentimiento = "consentimiento" in idx
     creados = actualizados = 0
     errores: list[str] = []
+    sin_consentimiento: list[int] = []
     contador: dict[tuple, int] = {}
     try:
         for n, fila in enumerate(filas, start=2):
@@ -104,19 +111,26 @@ def importar_excel(con: sqlite3.Connection, ruta_o_bytes, *, hash_documento: boo
             consentimiento = 1 if _norm(celda(fila, "consentimiento")) in _SI else 0
             clave = (sede, grado, grupo)
             contador[clave] = contador.get(clave, 0) + 1
-            existe = con.execute("SELECT 1 FROM estudiantes WHERE codigo=?", (codigo,)).fetchone()
+            existe = con.execute("SELECT id, nombre FROM estudiantes WHERE codigo=?", (codigo,)).fetchone()
+            if existe is not None and _nombre_norm(existe["nombre"]) != _nombre_norm(nombre):
+                errores.append(f"Fila {n}: el código ya pertenece a otro estudiante (posible código reutilizado)")
+                continue
+            # sin la columna de consentimiento se conserva el valor guardado (solo los nuevos quedan en 0)
             con.execute(
                 "INSERT INTO estudiantes(codigo, nombre, grado, grupo, sede, orden, consentimiento, activo) "
                 "VALUES(?,?,?,?,?,?,?,1) ON CONFLICT(codigo) DO UPDATE SET nombre=excluded.nombre, "
                 "grado=excluded.grado, grupo=excluded.grupo, sede=excluded.sede, orden=excluded.orden, "
-                "consentimiento=excluded.consentimiento, activo=1",
-                (codigo, nombre, grado, grupo, sede, contador[clave], consentimiento))
+                "consentimiento=CASE WHEN ? THEN excluded.consentimiento ELSE estudiantes.consentimiento END, "
+                "activo=1",
+                (codigo, nombre, grado, grupo, sede, contador[clave], consentimiento, 1 if hay_consentimiento else 0))
             if existe:
                 actualizados += 1
+                if hay_consentimiento and not consentimiento:
+                    sin_consentimiento.append(existe["id"])
             else:
                 creados += 1
-        con.execute("UPDATE tarjetas SET activa=0 WHERE activa=1 AND estudiante_id IN "
-                    "(SELECT id FROM estudiantes WHERE consentimiento=0)")
+        con.executemany("UPDATE tarjetas SET activa=0 WHERE activa=1 AND estudiante_id=?",
+                        [(i,) for i in sin_consentimiento])
         con.commit()
     except Exception:
         con.rollback()
