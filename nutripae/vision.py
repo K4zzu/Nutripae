@@ -85,6 +85,9 @@ DENSIDAD = {
 }
 
 # variable de entorno con la API key de cada proveedor
+# tiempo máximo de espera de cada llamada (s); al vencer, la ruta responde 502 "No se pudo leer la bandeja"
+TIEMPO_S = 20
+
 ENV_KEY = {"anthropic": "ANTHROPIC_API_KEY", "gemini": "GEMINI_API_KEY", "openai": "OPENAI_API_KEY"}
 
 
@@ -95,6 +98,19 @@ def _prompt(cat: dict | None = None) -> str:
 
 
 # ---------------------------------------------------------------- API
+
+def _apto(valor) -> bool:
+    """`apto` estricto: verdadero solo con `true` (booleano o texto, sin importar mayúsculas).
+
+    `bool("false")` sería True, por eso el texto se lee explícitamente. Un `null` cuenta como
+    ausente (apto); cualquier otro valor (números, "no", listas…) cuenta como no apto.
+    """
+    if valor is None or valor is True:
+        return True
+    if isinstance(valor, str):
+        return valor.strip().lower() == "true"
+    return False
+
 
 class VisionAPI:
     """Modelo multimodal con salida JSON. Proveedores: 'openai', 'anthropic' o 'gemini'."""
@@ -114,7 +130,7 @@ class VisionAPI:
         datos = buf.getvalue()
         if self.proveedor == "anthropic":
             import anthropic
-            cliente = anthropic.Anthropic(api_key=self.api_key)
+            cliente = anthropic.Anthropic(api_key=self.api_key, timeout=TIEMPO_S, max_retries=1)
             r = cliente.messages.create(
                 model=self.modelo or "claude-sonnet-5-5", max_tokens=1500,
                 messages=[{"role": "user", "content": [
@@ -127,7 +143,7 @@ class VisionAPI:
         if self.proveedor == "gemini":
             from google import genai
             from google.genai import types
-            cliente = genai.Client(api_key=self.api_key)
+            cliente = genai.Client(api_key=self.api_key, http_options={"timeout": TIEMPO_S * 1000})  # ms
             r = cliente.models.generate_content(
                 model=self.modelo or "gemini-2.5-flash",
                 contents=[types.Part.from_bytes(data=datos, mime_type="image/jpeg"), prompt],
@@ -136,7 +152,7 @@ class VisionAPI:
             return r.text
         if self.proveedor == "openai":
             from openai import OpenAI
-            cliente = OpenAI(api_key=self.api_key)
+            cliente = OpenAI(api_key=self.api_key, timeout=TIEMPO_S, max_retries=1)
             r = cliente.chat.completions.create(
                 model=self.modelo or "gpt-4.1-mini",
                 response_format={"type": "json_object"},
@@ -173,7 +189,7 @@ class VisionAPI:
                 out.append(Deteccion(
                     alimento=clave, nombre=nombre, gramos=float(it.get("gramos_estimados", 0)),
                     bbox=bbox, confianza=float(it.get("confianza", 0.8)),
-                    apto=bool(it.get("apto", True)), observacion=it.get("observacion", "")))
+                    apto=_apto(it.get("apto", True)), observacion=it.get("observacion", "")))
             return ResultadoVision(out, bool(data.get("persona", False)))
         except (ValueError, TypeError, AttributeError, KeyError):
             raise ValueError("La respuesta de la IA no se pudo leer") from None
