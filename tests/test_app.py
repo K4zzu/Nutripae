@@ -51,3 +51,8 @@ def test_app_usa_conexion_por_hilo(app):
     from nutripae import db
     assert isinstance(app.state.con, db.ConexionPorHilo)
     assert isinstance(db.conectar(app.state.settings.db_path), __import__("sqlite3").Connection)
+
+
+def test_sin_paginas_de_documentacion(client):
+    for ruta in ("/docs", "/redoc", "/openapi.json"):
+        assert client.get(ruta).status_code == 404

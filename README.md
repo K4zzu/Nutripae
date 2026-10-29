@@ -183,6 +183,8 @@ solo-CPU y luego las dependencias, descarga los pesos `FastSAM-s.pt`, genera `NU
 
 - **HTTPS es obligatorio**: sin certificado el navegador no deja usar la cámara. Abre los puertos 80 y 443 en el
   firewall de Lightsail y usa un dominio.
+- **Antes de certbot no se puede entrar**: con `NUTRIPAE_HTTPS=1` la cookie de sesión solo viaja por HTTPS, así
+  que por `http://` el formulario de entrada vuelve a pedir usuario y contraseña. Corre certbot y entra por `https://`.
 - El servicio corre **un solo proceso** de uvicorn (`--workers 1`): la cola de análisis vive dentro del proceso.
   Con más procesos se analizarían varias fotos a la vez y la memoria no alcanza.
 - Si las esperas se vuelven habituales en el piloto, se sube al plan de 4 GB (2 vCPU) antes que complicar el software.

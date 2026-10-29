@@ -36,7 +36,8 @@ def _analizador(settings: Settings, con) -> Analizador | None:
 
 
 def crear_app(settings: Settings) -> FastAPI:
-    app = FastAPI(title="NutriPAE")
+    # sin páginas de documentación automática: no deben quedar expuestas en el servidor del colegio
+    app = FastAPI(title="NutriPAE", docs_url=None, redoc_url=None, openapi_url=None)
     app.state.settings = settings
     app.state.con = db.ConexionPorHilo(settings.db_path)
     app.state.con.actual()  # crea el esquema al arrancar
