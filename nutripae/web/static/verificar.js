@@ -70,6 +70,8 @@
   }
   ajustarBotones();
   el.pantalla.classList.toggle("np-v-es-estacion", ESTACION);
+  // en la estación la barra superior (con "Salir") se oculta; queda un "Salir" discreto abajo a la derecha
+  document.body.classList.toggle("np-estacion", ESTACION);
 
   // ------------------------------------------------------------------ cámara
   async function iniciarCamara() {

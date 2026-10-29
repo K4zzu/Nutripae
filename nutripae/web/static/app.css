@@ -5,6 +5,8 @@
   --amarillo: #FAC344; --amarillo-oscuro: #B8820A; --amarillo-claro: #FFF4D6;
   --rojo: #EE3B5A; --rojo-semaforo: #E02E4D; --rojo-oscuro: #B81F3C; --rojo-claro: #FFE1E6;
   --azul: #1C3F9E;
+  /* texto sobre los fondos claros de estado (contraste AA >= 4.5:1 sobre --verde-claro, --amarillo-claro, --rojo-claro) */
+  --verde-texto: #0B6E4F; --amarillo-texto: #7A5300; --rojo-texto: #8E1830;
   --tinta: #1F1A3D; --tinta2: #5A557A; --muted: #9A96B3;
   --line: #E6E2F5;
   --bg: #FFFFFF; --surf: #FFFFFF; --suave: #F7F5FF;
@@ -85,7 +87,7 @@ body { margin: 0; background: var(--bg); }
 .np-entrar-caja input:focus { outline: none; border-color: var(--morado); background: var(--surf);
   box-shadow: 0 0 0 4px var(--morado-claro); }
 .np-entrar-caja .np-btn { margin-top: 14px; }
-.np-error { margin: 0; padding: 12px 16px; border-radius: 16px; background: var(--rojo-claro); color: var(--rojo-oscuro);
+.np-error { margin: 0; padding: 12px 16px; border-radius: 16px; background: var(--rojo-claro); color: var(--rojo-texto);
   font-weight: 700; }
 
 /* ---------------------------------------------------------------- pantalla de inicio de la estación */
@@ -113,7 +115,7 @@ body { margin: 0; background: var(--bg); }
   background: var(--amarillo); box-shadow: 0 0 14px var(--amarillo); animation: npScan 3.2s ease-in-out infinite; }
 .np-v[data-estado="esperando"] .np-v-escaner { display: block; }
 .np-v-camara-aviso { position: absolute; inset: auto 16px 16px; margin: 0; padding: 14px 18px; border-radius: 16px;
-  background: var(--rojo-claro); color: var(--rojo-oscuro); font: 600 22px/1.2 var(--titulos); text-align: center; }
+  background: var(--rojo-claro); color: var(--rojo-texto); font: 600 22px/1.2 var(--titulos); text-align: center; }
 .np-v:not([data-estado="esperando"]) .np-v-camara-aviso { display: none; }
 
 /* semáforo: siempre color + ícono */
@@ -139,8 +141,8 @@ body { margin: 0; background: var(--bg); }
 .np-v-docente { display: flex; flex-direction: column; gap: 12px; font-size: 15px; }
 .np-v-barra { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 .np-v-lectura { margin: 0; padding: 10px 18px; border-radius: 999px; background: var(--suave); font-weight: 700; color: var(--tinta2); }
-.np-v-lectura.np-v-bien { background: var(--verde-claro); color: var(--verde-oscuro); }
-.np-v-lectura.np-v-mal { background: var(--rojo-claro); color: var(--rojo-oscuro); }
+.np-v-lectura.np-v-bien { background: var(--verde-claro); color: var(--verde-texto); }
+.np-v-lectura.np-v-mal { background: var(--rojo-claro); color: var(--rojo-texto); }
 .np-v-acciones { display: flex; flex-wrap: wrap; gap: 10px; }
 .np-v-acciones .np-btn-sec { min-height: 56px; font-size: 18px; border-width: 2px; }
 .np-v-acciones .np-btn-sec:disabled { border-color: var(--line); color: var(--muted); cursor: default; background: var(--surf); }
@@ -156,9 +158,9 @@ body { margin: 0; background: var(--bg); }
 .np-v-alimento i { width: 14px; height: 14px; border-radius: 50%; flex: none; }
 /* chips de estado: fondo claro y texto oscuro del mismo tono */
 .np-v-estado { display: inline-block; padding: 3px 12px; border-radius: 999px; font-weight: 800; white-space: nowrap; }
-.np-v-estado-ok { background: var(--verde-claro); color: var(--verde-oscuro); }
-.np-v-estado-corto, .np-v-estado-excedido { background: var(--amarillo-claro); color: var(--amarillo-oscuro); }
-.np-v-estado-falta { background: var(--rojo-claro); color: var(--rojo-oscuro); }
+.np-v-estado-ok { background: var(--verde-claro); color: var(--verde-texto); }
+.np-v-estado-corto, .np-v-estado-excedido { background: var(--amarillo-claro); color: var(--amarillo-texto); }
+.np-v-estado-falta { background: var(--rojo-claro); color: var(--rojo-texto); }
 .np-v-estado-no_apto { background: var(--rojo-oscuro); color: #fff; }
 .np-v-nutrientes { display: grid; grid-template-columns: auto auto; gap: 6px 12px; margin: 0; }
 .np-v-nutrientes dt { color: var(--tinta2); }
@@ -185,8 +187,13 @@ body { margin: 0; background: var(--bg); }
 .np-v-corregir-item { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: center;
   padding: 8px 10px; border-radius: 16px; }
 .np-v-foco { background: var(--morado-claro); }
-.np-v-enlace { border: none; background: none; color: var(--morado); font: 700 15px var(--sans); text-decoration: underline;
-  cursor: pointer; min-height: 44px; }
+/* estación: sin barra superior; "Salir" pequeño y discreto abajo a la derecha (objetivo táctil 44 px) */
+.np-estacion .np-nav { display: none; }
+.np-v-salir { display: none; justify-content: flex-end; margin: 0; }
+.np-estacion .np-v-salir { display: flex; }
+.np-v-salir-boton { min-width: 44px; min-height: 44px; padding: 0 12px; border: none; border-radius: 999px; background: none;
+  color: var(--muted); font: 600 13px var(--sans); cursor: pointer; }
+.np-v-salir-boton:hover, .np-v-salir-boton:focus-visible { color: var(--tinta2); background: var(--suave); }
 
 @media (max-width: 900px) {
   .np-v { padding: 12px; }
@@ -222,11 +229,11 @@ body { margin: 0; background: var(--bg); }
 .np-admin-tabla tr:last-child td { border-bottom: none; }
 .np-admin-tabla form { margin: 0; }
 .np-admin-tabla .np-btn-sec { min-height: 44px; padding: 0 16px; font-size: 15px; border-width: 2px; }
-.np-admin-tabla .np-btn-sec[aria-pressed="true"] { border-color: var(--verde-oscuro); background: var(--verde-claro); color: var(--verde-oscuro); }
+.np-admin-tabla .np-btn-sec[aria-pressed="true"] { border-color: var(--verde-oscuro); background: var(--verde-claro); color: var(--verde-texto); }
 .np-admin-tabla .np-btn-sec[aria-pressed="false"] { border-color: var(--line); color: var(--tinta2); }
-.np-admin-baja { border-color: var(--rojo-claro) !important; color: var(--rojo-oscuro) !important; }
+.np-admin-baja { border-color: var(--rojo-claro) !important; color: var(--rojo-texto) !important; }
 .np-admin-baja:hover { background: var(--rojo-claro) !important; }
-.np-ok { margin: 16px 0 0; padding: 12px 16px; border-radius: 16px; background: var(--verde-claro); color: var(--verde-oscuro); font-weight: 700; }
+.np-ok { margin: 16px 0 0; padding: 12px 16px; border-radius: 16px; background: var(--verde-claro); color: var(--verde-texto); font-weight: 700; }
 
 @media (prefers-reduced-motion: reduce) {
   .np-inicio p, .np-v-pide-tarjeta .np-v-semaforo, .np-v-escaner { animation: none; }
