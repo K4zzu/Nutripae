@@ -115,6 +115,8 @@ def importar_excel(con: sqlite3.Connection, ruta_o_bytes, *, hash_documento: boo
                 actualizados += 1
             else:
                 creados += 1
+        con.execute("UPDATE tarjetas SET activa=0 WHERE activa=1 AND estudiante_id IN "
+                    "(SELECT id FROM estudiantes WHERE consentimiento=0)")
         con.commit()
     except Exception:
         con.rollback()
@@ -161,9 +163,12 @@ def siguiente(con: sqlite3.Connection, sede: str, grado: str, grupo: str | None,
 
 def set_consentimiento(con: sqlite3.Connection, estudiante_id: int, valor: bool) -> None:
     con.execute("UPDATE estudiantes SET consentimiento=? WHERE id=?", (1 if valor else 0, estudiante_id))
+    if not valor:
+        con.execute("UPDATE tarjetas SET activa=0 WHERE estudiante_id=?", (estudiante_id,))
     con.commit()
 
 
 def dar_de_baja(con: sqlite3.Connection, estudiante_id: int) -> None:
     con.execute("UPDATE estudiantes SET activo=0 WHERE id=?", (estudiante_id,))
+    con.execute("UPDATE tarjetas SET activa=0 WHERE estudiante_id=?", (estudiante_id,))
     con.commit()

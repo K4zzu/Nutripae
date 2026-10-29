@@ -72,3 +72,22 @@ def test_rutas_tarjetas_exigen_admin(client, settings):
     login(client, settings, ["docente"])
     assert client.get("/admin/tarjetas.pdf?sede=a&grado=b&grupo=c").status_code in (302, 303, 401, 403)
     assert client.post("/admin/tarjetas/X/anular", follow_redirects=False).status_code in (302, 303, 401, 403)
+
+
+def test_quitar_consentimiento_o_dar_de_baja_anula_la_tarjeta(settings):
+    con = db.conectar(settings.db_path)
+    students.importar_excel(con, xlsx([("A1", "Ana", "3°", "3-A", "IE", "sí"),
+                                       ("A2", "Luis", "3°", "3-A", "IE", "sí")]))
+    a, b = cards.asignar_tarjeta(con, 1), cards.asignar_tarjeta(con, 2)
+    students.set_consentimiento(con, 1, False)
+    assert cards.tarjeta_activa(con, 1) is None and db.estudiante_por_tarjeta(con, a) is None
+    students.dar_de_baja(con, 2)
+    assert cards.tarjeta_activa(con, 2) is None and db.estudiante_por_tarjeta(con, b) is None
+
+
+def test_reimportar_sin_consentimiento_anula_la_tarjeta(settings):
+    con = db.conectar(settings.db_path)
+    students.importar_excel(con, xlsx([("A1", "Ana", "3°", "3-A", "IE", "sí")]))
+    cards.asignar_tarjeta(con, 1)
+    students.importar_excel(con, xlsx([("A1", "Ana", "3°", "3-A", "IE", "no")]))
+    assert cards.tarjeta_activa(con, 1) is None

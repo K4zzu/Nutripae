@@ -15,7 +15,7 @@ from reportlab.pdfgen import canvas
 ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # sin 0/O/1/I
 LARGO = 10
 
-LOGO = Path(__file__).resolve().parent.parent / "docs" / "identidad" / "logo-fondo-blanco.png"
+LOGO = Path(__file__).resolve().parent / "web" / "static" / "img" / "logo-impresion.png"
 
 MORADO = (0x4C / 255, 0x17 / 255, 0xC1 / 255)
 TINTA = (0x1F / 255, 0x1A / 255, 0x3D / 255)
