@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Historial de {{ estudiante.nombre }} · NutriPAE{% endblock %}
+{% block content %}
+<main class="np-hist">
+  <h1 class="np-h">{{ estudiante.nombre }}</h1>
+  <p class="np-sub">{{ estudiante.grado|capitalize }}{% if estudiante.grupo %} · {{ estudiante.grupo }}{% endif %} · {{ estudiante.sede }}</p>
+
+  <form method="get" class="np-hist-filtro">
+    <label>Desde <input type="date" name="desde" value="{{ desde }}"></label>
+    <label>Hasta <input type="date" name="hasta" value="{{ hasta }}"></label>
+    <button type="submit" class="np-btn-sec">Ver</button>
+    <a class="np-btn-sec np-hist-pdf" href="/estudiantes/{{ estudiante.id }}/historial.pdf?desde={{ desde }}&amp;hasta={{ hasta }}">Generar PDF</a>
+  </form>
+
+  {% if faltas %}
+  <section class="np-card">
+    <h2 class="np-h">Lo que más le ha faltado</h2>
+    <div class="np-hist-chips">
+      {% for f in faltas %}<span class="np-gchip falta"><span aria-hidden="true">✕</span> {{ f.label }} · {{ f.dias }} {{ "día" if f.dias == 1 else "días" }}</span>{% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% for d in dias %}
+  <article class="np-card np-hist-dia">
+    <div>
+      <div class="np-hist-fecha">{{ d.fecha.strftime("%d/%m/%Y") }}</div>
+      <div class="np-hist-meta">{{ d.intentos }} {{ "intento" if d.intentos == 1 else "intentos" }}</div>
+    </div>
+    <div>
+      <span class="np-estado" data-semaforo="{{ d.ultima.semaforo }}"><span aria-hidden="true">{{ d.etiqueta[0] }}</span> {{ d.etiqueta[1] }}</span>
+      <div class="np-hist-chips">
+        {% for g in d.presentes %}<span class="np-gchip" style="--c: {{ g.color }}"><i aria-hidden="true"></i><span aria-hidden="true">✓</span> {{ g.label }}</span>{% endfor %}
+        {% for g in d.faltantes %}<span class="np-gchip falta" style="--c: {{ g.color }}"><span aria-hidden="true">✕</span> Falta {{ g.label|lower }}</span>{% endfor %}
+      </div>
+      <div class="np-hist-meta">{{ d.kcal }} calorías</div>
+    </div>
+    {% if d.ultima.foto %}<a href="/fotos/{{ d.ultima.foto }}"><img class="np-hist-foto" src="/fotos/{{ d.ultima.foto }}" alt="Foto del plato del {{ d.fecha.strftime('%d/%m') }}" loading="lazy"></a>{% endif %}
+  </article>
+  {% else %}
+  <p class="np-sub">No hay platos revisados en estas fechas.</p>
+  {% endfor %}
+</main>
+{% endblock %}

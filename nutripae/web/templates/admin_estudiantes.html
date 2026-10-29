@@ -26,7 +26,7 @@
       <tbody>
       {% for e in lista %}
         <tr>
-          <td>{{ e.nombre }}</td>
+          <td><a href="/estudiantes/{{ e.id }}/historial">{{ e.nombre }}</a></td>
           <td>
             <form method="post" action="/admin/estudiantes/{{ e.id }}/consentimiento">
               <input type="hidden" name="valor" value="{{ 0 if e.consentimiento else 1 }}">

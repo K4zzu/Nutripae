@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Resumen · {{ sede }} · NutriPAE{% endblock %}
+{% block content %}
+<main class="np-hist">
+  <h1 class="np-h">Resumen · {{ sede }}</h1>
+
+  <form method="get" class="np-hist-filtro" id="filtro">
+    {% if sedes|length > 1 %}
+    <label>Sede
+      <select onchange="location.href='/sedes/' + encodeURIComponent(this.value) + '/resumen'">
+        {% for s in sedes %}<option value="{{ s }}"{% if s == sede %} selected{% endif %}>{{ s }}</option>{% endfor %}
+      </select>
+    </label>
+    {% endif %}
+    <label>Grado
+      <select name="grado">
+        <option value="">Todos</option>
+        {% for g in grados %}<option value="{{ g }}"{% if g == grado %} selected{% endif %}>{{ g|capitalize }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Desde <input type="date" name="desde" value="{{ desde }}"></label>
+    <label>Hasta <input type="date" name="hasta" value="{{ hasta }}"></label>
+    <button type="submit" class="np-btn-sec">Ver</button>
+  </form>
+
+  <section class="np-card">
+    <h2 class="np-h">Platos completos por día</h2>
+    {% for fecha, pct, n in por_dia %}
+    <div class="np-resumen-dia">
+      <span>{{ fecha.strftime("%d/%m/%Y") }}</span>
+      <div class="np-barra" role="img" aria-label="{{ pct }}% de platos completos"><span style="width: {{ pct }}%"></span></div>
+      <span><strong>{{ pct }}%</strong> de {{ n }} {{ "plato" if n == 1 else "platos" }}</span>
+    </div>
+    {% else %}
+    <p class="np-sub">No hay platos revisados en estas fechas.</p>
+    {% endfor %}
+  </section>
+
+  <section class="np-card" style="margin-top: 16px">
+    <h2 class="np-h">Lo que más falta</h2>
+    {% if mas_falta %}
+    <p><span class="np-gchip falta" style="--c: {{ mas_falta.color }}"><span aria-hidden="true">✕</span> {{ mas_falta.label }}</span></p>
+    <p class="np-sub">{{ mas_falta.razon }}</p>
+    {% else %}
+    <p class="np-sub"><span aria-hidden="true">✓</span> En estas fechas no faltó ningún grupo.</p>
+    {% endif %}
+    <p><span class="np-estado" data-semaforo="no_apto"><span aria-hidden="true">—</span> Alimentos no aptos: {{ no_aptos }}</span></p>
+  </section>
+</main>
+{% endblock %}

@@ -13,7 +13,7 @@ from nutripae import db, segment, vision
 from nutripae.analyze import Analizador
 from nutripae.balance import UMBRALES_INICIALES
 from nutripae.config import Settings, log
-from nutripae.web import routes_auth, routes_students, routes_verify
+from nutripae.web import routes_auth, routes_history, routes_students, routes_verify
 
 BASE = Path(__file__).parent
 
@@ -39,6 +39,8 @@ def crear_app(settings: Settings) -> FastAPI:
     app.state.settings = settings
     app.state.con = db.conectar(settings.db_path)
     app.state.templates = Jinja2Templates(directory=str(BASE / "templates"))
+    app.state.templates.env.globals["primera_sede"] = lambda request: (
+        routes_history._sedes_visibles(request) or [None])[0]
     app.state.analizador = _analizador(settings, app.state.con)
     app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")
 
@@ -47,6 +49,7 @@ def crear_app(settings: Settings) -> FastAPI:
     app.include_router(routes_auth.router)
     app.include_router(routes_verify.router)
     app.include_router(routes_students.router)
+    app.include_router(routes_history.router)
 
     @app.get("/salud")
     def salud() -> dict:

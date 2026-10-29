@@ -452,6 +452,9 @@
     b.textContent = (sugerido ? "Siguiente en lista: " : "") + e.nombre + (e.grupo ? ` · ${e.grupo}` : "");
     b.addEventListener("click", () => elegir(e));
     li.append(b);
+    const h = document.createElement("a");
+    h.href = `/estudiantes/${e.id}/historial`; h.className = "np-sub"; h.textContent = " Historial";
+    li.append(h);
     return li;
   }
 
