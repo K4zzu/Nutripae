@@ -74,3 +74,29 @@ def test_parrafo_familia_directo():
     assert t == ("En estos 5 días, a Ana le sirvieron un plato balanceado 3 de 5 veces. "
                  "Lo que más le faltó fue fruta: La fruta le da vitaminas para no enfermarse.")
     assert reports.parrafo_familia("Ana", 1, 1, None).endswith("¡Muy bien!")
+
+
+def test_ninguna_fila_cae_sobre_el_pie(settings, monkeypatch):
+    from reportlab.lib.units import mm
+    from reportlab.pdfgen import canvas
+    con = db.conectar(settings.db_path)
+    _ana(con)
+    for d in range(1, 31):
+        insertar(con, 1, datetime(2026, 10, d, 12), "verde")
+    fechas, rects = [], []
+    ds, rc = canvas.Canvas.drawString, canvas.Canvas.rect
+
+    def drawString(self, x, y, text, *a, **k):
+        if re.fullmatch(r"\d{1,2} oct", text):
+            fechas.append(y)
+        return ds(self, x, y, text, *a, **k)
+
+    def rect(self, x, y, *a, **k):
+        rects.append(y)
+        return rc(self, x, y, *a, **k)
+    monkeypatch.setattr(canvas.Canvas, "drawString", drawString)
+    monkeypatch.setattr(canvas.Canvas, "rect", rect)
+    reports.pdf_historial(con, settings, 1, date(2026, 10, 1), date(2026, 10, 31))
+    linea_pie = 15 * mm + 6 * mm
+    assert len(fechas) == 30
+    assert min(fechas) > linea_pie and min(rects) > linea_pie

@@ -14,7 +14,6 @@ from nutripae.cards import LOGO, MORADO, PAGINA_H, PAGINA_W, TINTA
 from nutripae.config import Settings
 
 MARGEN = 15 * mm
-FILAS_POR_PAGINA = 25
 ALTO_FILA = 8 * mm
 MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
          "septiembre", "octubre", "noviembre", "diciembre"]
@@ -192,7 +191,7 @@ def pdf_historial(con: sqlite3.Connection, settings: Settings, estudiante_id: in
     if dias:
         y = _cabecera_tabla(c, y)
         for i, d in enumerate(dias):
-            if i and i % FILAS_POR_PAGINA == 0:
+            if i and y - ALTO_FILA + 2 * mm < MARGEN + 8 * mm:  # la fila no cabe sobre el pie
                 _pie(c, pagina)
                 c.showPage()
                 pagina += 1
