@@ -19,11 +19,8 @@ env/
 *.pem
 *.key
 
-# --- Datos locales (SQLite) ---
-data/*.db
-data/*.db-journal
-data/*.db-wal
-data/*.db-shm
+# --- Datos locales (SQLite y fotos de menores: nunca se versionan) ---
+data/
 *.sqlite
 *.sqlite3
 
