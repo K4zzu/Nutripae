@@ -17,6 +17,7 @@
   const QR_ESTABLE = 1000;       // ms que el mismo QR debe verse antes de capturar
   const ESPERA_VEREDICTO = 8000; // ms que el veredicto queda en pantalla en la estación
   const SIN_TARJETA = 5000;      // ms sin QR antes de pedir "Acerca tu tarjeta"
+  const QR_RECIENTE = 2000;      // ms en que un QR visto en vivo aún vale para la toma
   const REINTENTOS_OCUPADO = 3;
 
   const ICONO = { verde: "✓", amarillo: "!", rojo: "✕" };
@@ -44,7 +45,8 @@
     estado: "esperando",   // esperando | analizando | veredicto | aviso
     camara: false,
     qrVisto: null, qrDesde: 0, ultimoQR: Date.now(),
-    qrLeido: null,         // último QR leído (celular) o el que se usará al capturar
+    qrLeido: null,         // último QR visto en vivo
+    qrLeidoEn: 0,          // cuándo se vio por última vez
     qrUsado: null,         // QR del último veredicto: no vuelve a disparar mientras siga a la vista
     elegido: null,         // estudiante elegido con Buscar
     veredicto: null, alimentos: null, temporizador: null,
@@ -90,15 +92,27 @@
   }
   const videoListo = () => s.camara && el.video.readyState >= 2 && el.video.videoWidth > 0;
 
-  function leerQR() {
-    if (!videoListo() || typeof jsQR !== "function") return null;
-    const v = el.video, escala = Math.min(1, 640 / v.videoWidth);
-    const w = Math.round(v.videoWidth * escala), h = Math.round(v.videoHeight * escala);
-    const c = el.lienzo; c.width = w; c.height = h;
-    const ctx = c.getContext("2d", { willReadFrequently: true });
-    ctx.drawImage(v, 0, 0, w, h);
-    const r = jsQR(ctx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: "dontInvert" });
+  function qrEn(canvas) {
+    if (typeof jsQR !== "function") return null;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    const r = jsQR(ctx.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height,
+      { inversionAttempts: "dontInvert" });
     return r && r.data ? r.data.trim() : null;
+  }
+
+  function leerQR() {
+    if (!videoListo()) return null;
+    const v = el.video, escala = Math.min(1, 640 / v.videoWidth);
+    const c = el.lienzo;
+    c.width = Math.round(v.videoWidth * escala); c.height = Math.round(v.videoHeight * escala);
+    c.getContext("2d", { willReadFrequently: true }).drawImage(v, 0, 0, c.width, c.height);
+    return qrEn(c);
+  }
+
+  // Tarjeta para la toma: la del propio fotograma; si no, una vista hace menos de QR_RECIENTE ms.
+  function tarjetaParaToma(qrDelFotograma) {
+    if (qrDelFotograma) return qrDelFotograma;
+    return s.qrLeido && Date.now() - s.qrLeidoEn <= QR_RECIENTE ? s.qrLeido : null;
   }
 
   function cicloQR() {
@@ -111,14 +125,18 @@
       s.qrVisto = null;
       if (s.qrUsado && s.estado === "esperando") s.qrUsado = null; // la tarjeta salió de la vista
     }
-
-    if (!ESTACION) {
-      if (codigo && s.estado !== "analizando" && codigo !== s.qrLeido) { s.qrLeido = codigo; mostrarLectura(); }
-      return;
+    if (codigo && s.estado !== "analizando") {
+      const cambio = codigo !== s.qrLeido;
+      s.qrLeido = codigo; s.qrLeidoEn = ahora;
+      if (cambio && !ESTACION) mostrarLectura();
+    } else if (!ESTACION && s.qrLeido && ahora - s.qrLeidoEn > QR_RECIENTE && s.estado !== "analizando") {
+      s.qrLeido = null; // la tarjeta ya no está a la vista: no se usará al capturar
+      mostrarLectura();
     }
+
+    if (!ESTACION) return;
     if (s.estado === "esperando") {
       if (codigo && codigo !== s.qrUsado && ahora - s.qrDesde >= QR_ESTABLE) {
-        s.qrLeido = codigo;
         capturar();
       } else if (!codigo && videoListo() && ahora - s.ultimoQR > SIN_TARJETA) {
         pedirTarjeta();
@@ -152,8 +170,9 @@
     const v = el.video, escala = Math.min(1, 1280 / Math.max(v.videoWidth, v.videoHeight));
     const c = document.createElement("canvas");
     c.width = Math.round(v.videoWidth * escala); c.height = Math.round(v.videoHeight * escala);
-    c.getContext("2d").drawImage(v, 0, 0, c.width, c.height);
-    return new Promise((ok) => c.toBlob(ok, "image/jpeg", 0.85));
+    c.getContext("2d", { willReadFrequently: true }).drawImage(v, 0, 0, c.width, c.height);
+    const qr = qrEn(c);
+    return new Promise((ok) => c.toBlob((blob) => ok({ blob, qr }), "image/jpeg", 0.85));
   }
 
   async function capturar(intento = 0) {
@@ -167,13 +186,15 @@
     el.detalle.textContent = "Quédate quieto un momento.";
 
     const datos = new FormData();
-    datos.append("foto", await (practica ? fotoGris() : fotoCamara()), "bandeja.jpg");
+    const toma = practica ? { blob: await fotoGris(), qr: null } : await fotoCamara();
+    const tarjeta = s.elegido ? null : tarjetaParaToma(toma.qr);
+    datos.append("foto", toma.blob, "bandeja.jpg");
     datos.append("modo", practica ? "demo" : "camara");
     if (practica) datos.append("escenario", el.situacion.value);
     datos.append("grado", el.grado.value);
     if (s.elegido) datos.append("estudiante_id", String(s.elegido.id));
-    else if (s.qrLeido) datos.append("tarjeta", s.qrLeido);
-    s.qrUsado = s.qrLeido;
+    else if (tarjeta) datos.append("tarjeta", tarjeta);
+    s.qrUsado = tarjeta;
 
     let r;
     try {
@@ -192,7 +213,7 @@
       }
       return mostrarAviso(j && j.mensaje ? j.mensaje : "No se pudo leer la bandeja. Intenta de nuevo.");
     }
-    if (!ESTACION) s.qrLeido = null;
+    s.qrLeido = null; // cada veredicto consume la tarjeta, en ambos modos
     s.elegido = null;
     mostrarVeredicto(j);
   }
@@ -213,7 +234,7 @@
     cambiarEstado("esperando");
     el.pantalla.classList.remove("np-v-pide-tarjeta");
     s.veredicto = null; s.ultimoQR = Date.now();
-    if (!ESTACION) s.qrLeido = null;
+    s.qrLeido = null;
     s.elegido = null;
     el.semaforo.dataset.semaforo = "espera";
     el.icono.innerHTML = iconoEspera;

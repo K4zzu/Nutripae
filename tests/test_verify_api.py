@@ -78,6 +78,37 @@ def test_sin_proveedor_la_camara_no_inventa(client, settings):
     assert db.conectar(settings.db_path).execute("SELECT COUNT(*) FROM verificaciones").fetchone()[0] == 0
 
 
+def _filas_atribuidas(settings):
+    return db.conectar(settings.db_path).execute(
+        "SELECT COUNT(*) FROM verificaciones WHERE estudiante_id IS NOT NULL").fetchone()[0]
+
+
+def test_estudiante_de_otra_sede_por_id_da_404(client, app, settings):
+    eid = _estudiante_con_tarjeta(settings, sede="IE B")
+    _con_camara(app)
+    login(client, settings, ["docente"], usuario="a", sedes=("IE A",))
+    r = client.post("/api/verificar", files={"foto": foto()}, data={"modo": "camara", "estudiante_id": str(eid)})
+    assert r.status_code == 404 and r.json() == {"error": "estudiante", "mensaje": "Estudiante no encontrado."}
+    assert _filas_atribuidas(settings) == 0
+
+
+def test_tarjeta_de_otra_sede_no_atribuye(client, app, settings):
+    _estudiante_con_tarjeta(settings, sede="IE B")
+    _con_camara(app)
+    login(client, settings, ["docente"], usuario="a", sedes=("IE A",))
+    j = client.post("/api/verificar", files={"foto": foto()}, data={"modo": "camara", "tarjeta": "QR1"}).json()
+    assert j["tarjeta_invalida"] is True and j["estudiante"] is None and j["nombre"] is None
+    assert _filas_atribuidas(settings) == 0
+
+
+def test_admin_atribuye_en_cualquier_sede(client, app, settings):
+    eid = _estudiante_con_tarjeta(settings, sede="IE B")
+    _con_camara(app)
+    login(client, settings, ["admin"], usuario="ad", sedes=())
+    j = client.post("/api/verificar", files={"foto": foto()}, data={"modo": "camara", "estudiante_id": str(eid)}).json()
+    assert j["estudiante"]["id"] == eid and _filas_atribuidas(settings) == 1
+
+
 def test_otra_sede_no_ve_foto_ni_corrige(client, app, settings):
     _estudiante_con_tarjeta(settings, sede="IE B")
     _con_camara(app)

@@ -102,11 +102,13 @@ def api_verificar(request: Request, usuario=Depends(auth.requiere(*ROLES_VERIFIC
     estudiante, tarjeta_invalida = None, False
     if tarjeta.strip():
         estudiante = db.estudiante_por_tarjeta(con, tarjeta.strip())
+        if estudiante is not None and not _sede_permitida(request, estudiante["sede"]):
+            estudiante = None  # tarjeta de otra sede: se analiza sin atribuir
         tarjeta_invalida = estudiante is None
-    elif estudiante_id.strip().isdigit():
-        estudiante = db.estudiante(con, int(estudiante_id))
-        if estudiante is not None and not estudiante["activo"]:
-            estudiante = None
+    elif estudiante_id.strip():
+        estudiante = db.estudiante(con, int(estudiante_id)) if estudiante_id.strip().isdigit() else None
+        if estudiante is None or not estudiante["activo"] or not _sede_permitida(request, estudiante["sede"]):
+            return _error(404, "estudiante", "Estudiante no encontrado.")
 
     grado_final = estudiante["grado"] if estudiante is not None and estudiante["grado"] in GRADOS else grado
     if grado_final not in GRADOS:
