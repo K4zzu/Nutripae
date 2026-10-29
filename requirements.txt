@@ -17,5 +17,7 @@ python-dotenv
 # Opcionales según el proveedor de IA que uses:
 # anthropic>=0.40          # IA de visión con Claude
 # google-genai>=1.0        # IA de visión con Gemini
-# Fase 2 (no se usa en el piloto; instala PyTorch, varios GB):
-# ultralytics>=8.3         # modelo propio YOLO en la estación (edge)
+
+# Segmentación FastSAM. En Linux instala antes PyTorch solo-CPU (más liviano):
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+ultralytics>=8.3
