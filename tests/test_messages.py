@@ -68,6 +68,12 @@ def test_excedido_explica_el_grupo_mas_corto():
     assert mensaje(v, None)[1].endswith("La proteína construye tus músculos.")
 
 
+def test_excedido_proteina_concuerda_en_genero():
+    props = {"verdura_fruta": 0.2, "proteina": 0.6, "energetico": 0.2}
+    v = Veredicto("amarillo", "proteina", "excedido", [], 400, props, {})
+    assert mensaje(v, None)[1].startswith("Tienes mucha proteína y poco de lo demás.")
+
+
 def test_pequeno():
     v = Veredicto("amarillo", None, "pequeno", [], 100, {}, {})
     assert mensaje(v, None)[1] == "Tu plato está muy pequeño. Pide un poco más de todo."

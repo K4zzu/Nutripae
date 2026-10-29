@@ -36,7 +36,7 @@ _NOMBRE_GRUPO = {
     "proteina": "proteína",
     "energetico": "arroz, papa o plátano",
 }
-_FEMENINOS = {"verdura", "fruta"}
+_FEMENINOS = {"verdura", "fruta", "proteina"}
 _CLAVE_A_GRUPO = {"verdura_fruta": "verdura", "proteina": "proteina", "energetico": "energetico"}
 _OBJETIVO = UMBRALES_INICIALES["objetivo"]
 
