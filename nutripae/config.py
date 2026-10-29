@@ -22,6 +22,7 @@ class Settings:
     modelo: str | None = None
     muestra_entrenamiento_dia: int = 50
     segmentador: str = "fastsam"
+    https: bool = False
 
 
 def cargar() -> Settings:
@@ -39,4 +40,5 @@ def cargar() -> Settings:
         modelo=os.getenv("NUTRIPAE_MODELO") or None,
         muestra_entrenamiento_dia=int(os.getenv("NUTRIPAE_MUESTRA_DIA", "50")),
         segmentador=os.getenv("NUTRIPAE_SEGMENTADOR", "fastsam"),
+        https=os.getenv("NUTRIPAE_HTTPS", "").strip().lower() in ("1", "true", "si", "sí", "yes"),
     )

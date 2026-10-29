@@ -1,14 +1,13 @@
 [Unit]
-Description=NutriPAE — verificación nutricional con IA (Streamlit)
+Description=NutriPAE v2 — verificación del plato balanceado (FastAPI)
 After=network.target
 
 [Service]
 User=ubuntu
 WorkingDirectory=/home/ubuntu/nutripae
 EnvironmentFile=/home/ubuntu/nutripae/.env
-ExecStart=/home/ubuntu/nutripae/.venv/bin/streamlit run app.py \
-  --server.port 8501 --server.address 127.0.0.1 --server.headless true \
-  --browser.gatherUsageStats false --server.maxUploadSize 20
+# Un solo proceso: la cola de análisis (de a uno por servidor) vive dentro del proceso.
+ExecStart=/home/ubuntu/nutripae/.venv/bin/uvicorn main:app --host 127.0.0.1 --port 8501 --workers 1 --proxy-headers
 Restart=always
 RestartSec=3
 

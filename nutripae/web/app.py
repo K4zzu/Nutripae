@@ -46,7 +46,7 @@ def crear_app(settings: Settings) -> FastAPI:
     app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")
 
     app.add_middleware(SessionMiddleware, secret_key=settings.secret,
-                       same_site="lax", https_only=False)
+                       same_site="lax", https_only=settings.https)
     app.include_router(routes_auth.router)
     app.include_router(routes_verify.router)
     app.include_router(routes_students.router)

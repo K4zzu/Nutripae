@@ -1,23 +1,23 @@
-fastapi
-uvicorn[standard]
-jinja2
-python-multipart
-itsdangerous
-bcrypt
-openpyxl
-qrcode[pil]
-reportlab
-httpx
-pytest
-openai
-pillow
-numpy
-python-dotenv
+fastapi>=0.115
+uvicorn[standard]>=0.30
+jinja2>=3.1
+python-multipart>=0.0.9
+itsdangerous>=2.2
+bcrypt>=4.1
+openpyxl>=3.1
+qrcode[pil]>=7.4
+reportlab>=4.1
+httpx>=0.27
+pytest>=8
+openai>=1.40
+pillow>=10.1
+numpy>=1.26
+python-dotenv>=1.0
 
-# Opcionales según el proveedor de IA que uses:
-# anthropic>=0.40          # IA de visión con Claude
-# google-genai>=1.0        # IA de visión con Gemini
+# Opcionales según el proveedor de IA de visión que uses (OpenAI ya viene arriba):
+# anthropic>=0.40          # Claude
+# google-genai>=1.0        # Gemini
 
-# Segmentación FastSAM. En Linux instala antes PyTorch solo-CPU (más liviano):
+# Segmentación FastSAM. Instala ANTES PyTorch solo-CPU (más liviano, sin CUDA):
 #   pip install torch --index-url https://download.pytorch.org/whl/cpu
 ultralytics>=8.3

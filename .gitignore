@@ -18,7 +18,6 @@ env/
 !.env.example
 *.pem
 *.key
-.streamlit/secrets.toml
 
 # --- Datos locales (SQLite) ---
 data/*.db
