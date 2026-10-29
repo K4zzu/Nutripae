@@ -16,10 +16,7 @@ def test_elipses_una_por_bbox_dentro_del_bbox():
 @pytest.mark.skipif(not os.getenv("NUTRIPAE_TEST_FASTSAM"), reason="descarga pesos; ejecutar con NUTRIPAE_TEST_FASTSAM=1")
 def test_fastsam_segmenta_bandeja_sintetica():
     from nutripae.vision import VisionDemo
-    try:
-        from nutripae.overlay import bandeja_sintetica  # Tarea 7
-    except ImportError:
-        from nutripae.detector import bandeja_sintetica  # v1, misma firma
+    from nutripae.overlay import bandeja_sintetica
     img = bandeja_sintetica(VisionDemo("completa", 1).analizar(Image.new("RGB", (900, 600))).detecciones)
     regs = FastSAMSegmentador().segmentar(img)
     assert 3 <= len(regs) <= 40
