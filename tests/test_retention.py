@@ -71,3 +71,23 @@ def test_https_desde_entorno(monkeypatch):
     assert config.cargar().https is True
     monkeypatch.setenv("NUTRIPAE_HTTPS", "0")
     assert config.cargar().https is False
+
+
+def test_crear_admin_desde_el_entorno(settings, monkeypatch, capsys):
+    from nutripae import auth, cli
+    monkeypatch.setattr(cli.config, "cargar", lambda: settings)
+    monkeypatch.setenv("NUTRIPAE_ADMIN", "jefa")
+    monkeypatch.setenv("NUTRIPAE_ADMIN_PASS", "cla've \"rara\" $HOME `x`")
+    assert cli.main(["crear-admin-env"]) == 0
+    assert "Usuario administrador creado" in capsys.readouterr().out
+    con = db.conectar(settings.db_path)
+    assert auth.verificar(con, "jefa", "cla've \"rara\" $HOME `x`") is not None
+
+
+def test_crear_admin_desde_el_entorno_sin_variables(settings, monkeypatch, capsys):
+    from nutripae import cli
+    monkeypatch.setattr(cli.config, "cargar", lambda: settings)
+    monkeypatch.delenv("NUTRIPAE_ADMIN", raising=False)
+    monkeypatch.delenv("NUTRIPAE_ADMIN_PASS", raising=False)
+    assert cli.main(["crear-admin-env"]) == 1
+    assert "NUTRIPAE_ADMIN" in capsys.readouterr().err

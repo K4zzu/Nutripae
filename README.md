@@ -170,9 +170,16 @@ sudo systemctl restart nutripae
 sudo apt install -y certbot python3-certbot-nginx && sudo certbot --nginx -d tu-dominio.edu.co
 ```
 
-El script crea **2 GB de swap** (PyTorch y FastSAM usan cerca de 1 GB al analizar), instala PyTorch solo-CPU y las
-dependencias, descarga los pesos `FastSAM-s.pt`, genera `NUTRIPAE_SECRET`, activa `NUTRIPAE_HTTPS=1`, crea el servicio
-`nutripae` (systemd) y el proxy Nginx, y crea el primer administrador si recibe las dos variables.
+El script crea **2 GB de swap** (PyTorch y FastSAM usan cerca de 1 GB al analizar), instala `torch` y `torchvision`
+solo-CPU y luego las dependencias, descarga los pesos `FastSAM-s.pt`, genera `NUTRIPAE_SECRET`, activa
+`NUTRIPAE_HTTPS=1` y crea el servicio `nutripae` (systemd) y el proxy Nginx.
+
+- **Primer administrador**: si recibe `NUTRIPAE_ADMIN` y `NUTRIPAE_ADMIN_PASS`, los pasa por el entorno a
+  `python -m nutripae.cli crear-admin-env`, así que la contraseña puede llevar comillas o cualquier otro carácter. Si
+  no se puede crear (falta una variable o el usuario ya existe), el script termina con un error claro. Al volver a
+  ejecutarlo no pases esas variables.
+- **Volver a ejecutarlo** no reescribe el sitio de Nginx si ya existe, para no borrar el bloque HTTPS que agrega
+  certbot. Para reescribirlo, por ejemplo al cambiar de dominio, añade `--forzar-nginx` y vuelve a correr certbot.
 
 - **HTTPS es obligatorio**: sin certificado el navegador no deja usar la cámara. Abre los puertos 80 y 443 en el
   firewall de Lightsail y usa un dominio.
@@ -190,8 +197,9 @@ sirvió cada día. Por eso:
   nada a su nombre** y no se le genera tarjeta.
 - **Qué se guarda por verificación**: alimentos, grupos, gramos estimados, nutrientes, semáforo, hora, sede, quién
   verificó, las correcciones de la docente y la foto anotada reducida (lado mayor **1024 px**, unos 100–150 KB).
-- **Muestra para entrenamiento**: además, el original sin anotar de una muestra de **50 bandejas por día y sede**
-  (configurable con `NUTRIPAE_MUESTRA_DIA`), nunca de todas. Servirá para entrenar el modelo propio de la fase 2.
+- **Muestra para entrenamiento**: además, la foto sin anotar, reducida a lado mayor **1280 px**, de una muestra de
+  **50 bandejas por día y sede** (configurable con `NUTRIPAE_MUESTRA_DIA`), nunca de todas. Servirá para entrenar el
+  modelo propio de la fase 2.
 - **Sin rostros**: la cámara apunta solo a la bandeja, desde arriba. Si la IA detecta una persona, la toma se
   descarta y se pide repetir.
 - **Acceso**: usuario y contraseña; cada usuario ve solo sus sedes; queda registro de quién consultó un historial o
@@ -251,7 +259,7 @@ nutripae/history.py        historial por niño y resumen por sede
 nutripae/reports.py        PDF para la familia
 nutripae/retention.py      borrado de fotos al cerrar el año escolar
 nutripae/auth.py           usuarios, contraseñas, roles y sedes
-nutripae/cli.py            crear-admin, borrar-fotos-antiguas
+nutripae/cli.py            crear-admin, crear-admin-env, borrar-fotos-antiguas
 nutripae/nutrition.py      tabla de composición ICBF
 nutripae/foods.py          alimentos conocidos y su grupo
 deploy/                    Lightsail: script de instalación, systemd y Nginx
