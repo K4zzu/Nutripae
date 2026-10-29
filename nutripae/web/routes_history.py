@@ -1,9 +1,13 @@
 """Historial por niño y resumen por sede."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+import re
+import unicodedata
 
-from nutripae import auth, db, foods, history, messages
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import Response
+
+from nutripae import auth, db, foods, history, messages, reports
 from nutripae.web.routes_verify import GRADOS, ROLES_VERIFICAR, _sede_permitida
 
 router = APIRouter()
@@ -49,6 +53,27 @@ def historial(estudiante_id: int, request: Request, desde: str = "", hasta: str 
     return request.app.state.templates.TemplateResponse(
         request, "historial.html",
         {"estudiante": est, "dias": dias, "faltas": faltas, "desde": ini.isoformat(), "hasta": fin.isoformat()})
+
+
+def _ascii(texto: str) -> str:
+    plano = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode()
+    return re.sub(r"[^A-Za-z0-9-]+", "_", plano).strip("_") or "x"
+
+
+@router.get("/estudiantes/{estudiante_id}/historial.pdf")
+def historial_pdf(estudiante_id: int, request: Request, desde: str = "", hasta: str = "",
+                  usuario=Depends(auth.requiere(*ROLES_VERIFICAR))):
+    con = request.app.state.con
+    est = db.estudiante(con, estudiante_id)
+    if est is None or not _sede_permitida(request, est["sede"]):
+        raise HTTPException(status_code=404)
+    ini, fin = history.periodo(desde, hasta)
+    datos = reports.pdf_historial(con, request.app.state.settings, estudiante_id, ini, fin)
+    history.auditar(con, usuario["id"], "pdf_historial", estudiante_id)
+    partes = est["nombre"].split()
+    nombre = f"historial_{_ascii(partes[-1] if partes else est['nombre'])}_{ini.isoformat()}_{fin.isoformat()}.pdf"
+    return Response(datos, media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
 
 
 @router.get("/sedes/{sede}/resumen")
