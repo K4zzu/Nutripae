@@ -5,7 +5,7 @@ from nutripae.vision import VisionAPI, VisionDemo, crear_vision
 
 def test_parsear_json_con_persona_y_otro():
     v = VisionAPI("openai", api_key="x")
-    r = v.parsear('```json\n{"persona": false, "items": [{"alimento": "otro", "nombre": "Sancocho", "gramos_estimados": 180, "bbox": [0,0,.5,.5], "confianza": .8, "apto": true, "observacion": ""}]}\n```')
+    r = v.parsear('```json\n{"persona": false, "items": [{"alimento": "otro", "nombre": "Sancocho", "gramos_estimados": 180, "bbox": [0,0,0.5,0.5], "confianza": 0.8, "apto": true, "observacion": ""}]}\n```')
     assert r.persona is False and r.detecciones[0].alimento == "otro" and r.detecciones[0].nombre == "Sancocho"
 
 

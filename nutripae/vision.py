@@ -10,7 +10,6 @@ import io
 import json
 import os
 import random
-import re
 from dataclasses import dataclass, field
 from typing import Protocol
 
@@ -158,7 +157,6 @@ class VisionAPI:
             texto = texto[4:]
         try:
             cuerpo = texto[texto.find("{"): texto.rfind("}") + 1]
-            cuerpo = re.sub(r"(?<=[\[,:\s])\.(\d)", r"0.\1", cuerpo)  # ".5" -> "0.5"
             data = json.loads(cuerpo)
             if not isinstance(data, dict):
                 raise ValueError
