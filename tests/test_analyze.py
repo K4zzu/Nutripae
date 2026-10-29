@@ -1,10 +1,11 @@
-import threading, time, pytest
+import json, threading, time, pytest
 from PIL import Image
 from nutripae.analyze import Analizador, PersonaDetectada, Ocupado
 from nutripae.vision import VisionDemo, ResultadoVision
 from nutripae.segment import SegmentadorElipses
 from nutripae.balance import UMBRALES_INICIALES
-from nutripae import db, verificaciones
+from nutripae import db, foods, verificaciones
+from nutripae.verificaciones import CorreccionInvalida
 
 class VisionPersona:
     def analizar(self, imagen): return ResultadoVision([], persona=True)
@@ -63,6 +64,14 @@ def test_corregir_reevalua_y_registra(settings):
     v2 = verificaciones.corregir(con, vid, idx, "ensalada_fresca", usuario_id=1)
     assert con.execute("select count(*) from correcciones").fetchone()[0] == 1
     assert con.execute("select corregida from verificaciones where id=?", (vid,)).fetchone()[0] == 1
+    fila = con.execute("select semaforo, porciones from verificaciones where id=?", (vid,)).fetchone()
+    assert v2.semaforo == fila["semaforo"]
+    guardadas = json.loads(fila["porciones"])
+    assert guardadas[idx]["alimento"] == "ensalada_fresca"
+    assert guardadas[idx]["nombre"] != a.veredicto.porciones[idx].nombre
+    assert guardadas[idx]["grupo"] == foods.grupo_de("ensalada_fresca") != a.veredicto.porciones[idx].grupo
+    faltas = [p["alimento"] for p in guardadas if p["alimento"].startswith("falta_")]
+    assert len(faltas) == len(set(faltas))
 
 def test_demo_no_guarda_foto_ni_estudiante(settings):
     con = conectar(settings)
@@ -80,3 +89,58 @@ def test_tarjeta_activa_devuelve_estudiante(settings):
     assert db.estudiante_por_tarjeta(con, "T1")["nombre"] == "Ana"
     assert db.estudiante_por_tarjeta(con, "T2") is None
     assert db.estudiante(con, 99) is None
+
+
+def test_guardar_fallido_hace_rollback_y_no_deja_archivos(settings, monkeypatch):
+    con = conectar(settings)
+    con.execute("insert into estudiantes(codigo,nombre,grado,grupo,sede,orden,consentimiento) values('E1','Ana','primaria','3-A','S',1,1)")
+    est = db.estudiante(con, 1)
+    a = analizador().analizar(Image.new("RGB", (640, 480)), "primaria", "Ana")
+    original = Image.Image.save
+    llamadas = []
+    def save(self, fp, *args, **kw):
+        llamadas.append(fp)
+        if len(llamadas) == 2:  # la foto de historial se escribe; falla la de entrenamiento
+            raise OSError("disco lleno")
+        return original(self, fp, *args, **kw)
+    monkeypatch.setattr(Image.Image, "save", save)
+    with pytest.raises(OSError):
+        verificaciones.guardar(con, settings, a, estudiante=est, sede="S", grado="primaria", usuario_id=1, modo="camara")
+    con.commit()
+    assert con.execute("select count(*) from verificaciones").fetchone()[0] == 0
+    assert con.execute("select count(*) from fotos_entrenamiento").fetchone()[0] == 0
+    assert not [f for f in settings.fotos_dir.rglob("*") if f.is_file()]
+
+
+def _guardada(settings):
+    con = conectar(settings)
+    a = analizador(VisionDemo("falta_grupo", 1)).analizar(Image.new("RGB", (640, 480)), "primaria", None)
+    vid = verificaciones.guardar(con, settings, a, estudiante=None, sede="S", grado="primaria", usuario_id=1, modo="camara")
+    return con, a, vid
+
+
+def test_corregir_verificacion_inexistente(settings):
+    con, a, vid = _guardada(settings)
+    with pytest.raises(CorreccionInvalida):
+        verificaciones.corregir(con, 999, 0, "ensalada_fresca", usuario_id=1)
+
+
+@pytest.mark.parametrize("indice", [-1, 99])
+def test_corregir_indice_fuera_de_rango(settings, indice):
+    con, a, vid = _guardada(settings)
+    with pytest.raises(CorreccionInvalida):
+        verificaciones.corregir(con, vid, indice, "ensalada_fresca", usuario_id=1)
+
+
+def test_corregir_porcion_falta_no_se_puede(settings):
+    con, a, vid = _guardada(settings)
+    idx = next(i for i, p in enumerate(a.veredicto.porciones) if p.estado == "falta")
+    with pytest.raises(CorreccionInvalida):
+        verificaciones.corregir(con, vid, idx, "ensalada_fresca", usuario_id=1)
+
+
+def test_corregir_alimento_desconocido(settings):
+    con, a, vid = _guardada(settings)
+    with pytest.raises(CorreccionInvalida):
+        verificaciones.corregir(con, vid, 0, "no_existe", usuario_id=1)
+    assert con.execute("select count(*) from correcciones").fetchone()[0] == 0
