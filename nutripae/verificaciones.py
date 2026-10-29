@@ -78,7 +78,8 @@ def corregir(con: sqlite3.Connection, verificacion_id: int, indice: int,
     fila = con.execute("SELECT * FROM verificaciones WHERE id=?", (verificacion_id,)).fetchone()
     if fila is None:
         raise CorreccionInvalida("No encontramos esa verificación.")
-    if alimento_nuevo not in foods.catalogo():
+    cat = foods.catalogo(con)
+    if alimento_nuevo not in cat:
         raise CorreccionInvalida("Ese alimento no está en el catálogo.")
     porciones = [_porcion_desde(d) for d in json.loads(fila["porciones"])]
     if not 0 <= indice < len(porciones):
@@ -88,8 +89,8 @@ def corregir(con: sqlite3.Connection, verificacion_id: int, indice: int,
     antes = porciones[indice].alimento
     p = porciones[indice]
     p.alimento = alimento_nuevo
-    p.nombre = foods.catalogo().get(alimento_nuevo, (p.nombre, None))[0]
-    p.grupo = foods.grupo_de(alimento_nuevo)
+    p.nombre = cat[alimento_nuevo][0]
+    p.grupo = cat[alimento_nuevo][1]
     porciones = [x for x in porciones if not x.alimento.startswith("falta_")]
     umbrales = db.param(con, "umbrales", balance.UMBRALES_INICIALES)
     v = balance.evaluar(porciones, fila["grado"], umbrales)

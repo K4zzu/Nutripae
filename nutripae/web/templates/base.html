@@ -23,6 +23,9 @@
       {% set sede0 = primera_sede(request) %}
       {% if sede0 %}<a href="/sedes/{{ sede0|urlencode }}/resumen"{% if request.url.path.endswith("/resumen") %} aria-current="page"{% endif %}>Resumen</a>{% endif %}
       {% endif %}
+      {% if request.state.roles and "admin" in request.state.roles %}
+      <a href="/admin/usuarios"{% if request.url.path.startswith("/admin/usuarios") or request.url.path.startswith("/admin/parametros") %} aria-current="page"{% endif %}>Administración</a>
+      {% endif %}
     </nav>
     <form method="post" action="/salir" class="np-nav-salir">
       <span class="np-nav-usuario">{{ request.state.usuario["nombre"] or request.state.usuario["usuario"] }}</span>

@@ -1,0 +1,5 @@
+<nav class="np-admin-tabs" aria-label="Administración">
+  <a href="/admin/estudiantes"{% if request.url.path.startswith("/admin/estudiantes") %} aria-current="page"{% endif %}>Estudiantes</a>
+  <a href="/admin/usuarios"{% if request.url.path.startswith("/admin/usuarios") %} aria-current="page"{% endif %}>Usuarios</a>
+  <a href="/admin/parametros"{% if request.url.path.startswith("/admin/parametros") %} aria-current="page"{% endif %}>Parámetros</a>
+</nav>

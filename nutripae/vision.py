@@ -88,9 +88,9 @@ DENSIDAD = {
 ENV_KEY = {"anthropic": "ANTHROPIC_API_KEY", "gemini": "GEMINI_API_KEY", "openai": "OPENAI_API_KEY"}
 
 
-def _prompt() -> str:
+def _prompt(cat: dict | None = None) -> str:
     return _PROMPT.format(
-        claves=", ".join(catalogo().keys()), bandeja_cm=BANDEJA_CM, comp_grande_cm=COMP_GRANDE_CM,
+        claves=", ".join((cat or catalogo()).keys()), bandeja_cm=BANDEJA_CM, comp_grande_cm=COMP_GRANDE_CM,
         comp_peq_cm=COMP_PEQ_CM, densidades="; ".join(f"{k} {v} g/cm³" for k, v in DENSIDAD.items()))
 
 
@@ -99,7 +99,9 @@ def _prompt() -> str:
 class VisionAPI:
     """Modelo multimodal con salida JSON. Proveedores: 'openai', 'anthropic' o 'gemini'."""
 
-    def __init__(self, proveedor: str, modelo: str | None = None, api_key: str | None = None):
+    def __init__(self, proveedor: str, modelo: str | None = None, api_key: str | None = None,
+                 catalogo_fn=None):
+        self._catalogo_fn = catalogo_fn  # catálogo vigente (con alimentos extra); None = el propio
         self.proveedor = proveedor
         self.modelo = modelo or os.getenv("NUTRIPAE_MODELO")
         self.api_key = api_key or os.getenv(ENV_KEY.get(proveedor, ""))
@@ -148,7 +150,7 @@ class VisionAPI:
         raise ValueError(f"Proveedor no soportado: {self.proveedor}")
 
     def analizar(self, imagen: Image.Image) -> ResultadoVision:
-        return self.parsear(self._llamar(imagen, _prompt()))
+        return self.parsear(self._llamar(imagen, _prompt(self._catalogo_fn() if self._catalogo_fn else None)))
 
     def parsear(self, texto: str) -> ResultadoVision:
         """Convierte la respuesta de la IA en un ResultadoVision (sin red)."""
@@ -160,7 +162,7 @@ class VisionAPI:
             data = json.loads(cuerpo)
             if not isinstance(data, dict):
                 raise ValueError
-            cat = catalogo()
+            cat = self._catalogo_fn() if self._catalogo_fn else catalogo()
             out = []
             for it in data.get("items") or []:
                 clave = it.get("alimento", "otro")
@@ -223,8 +225,8 @@ class VisionDemo:
         return ResultadoVision(out, False)
 
 
-def crear_vision(settings) -> Vision:
+def crear_vision(settings, catalogo_fn=None) -> Vision:
     """Demostración si no hay proveedor configurado; si no, la IA por API."""
     if settings.proveedor is None:
         return VisionDemo()
-    return VisionAPI(settings.proveedor, settings.modelo)
+    return VisionAPI(settings.proveedor, settings.modelo, catalogo_fn=catalogo_fn)

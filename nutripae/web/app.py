@@ -9,11 +9,11 @@ from fastapi.templating import Jinja2Templates
 
 from starlette.middleware.sessions import SessionMiddleware
 
-from nutripae import db, segment, vision
+from nutripae import db, foods, segment, vision
 from nutripae.analyze import Analizador
 from nutripae.balance import UMBRALES_INICIALES
 from nutripae.config import Settings, log
-from nutripae.web import routes_auth, routes_history, routes_students, routes_verify
+from nutripae.web import routes_admin, routes_auth, routes_history, routes_students, routes_verify
 
 BASE = Path(__file__).parent
 
@@ -27,8 +27,9 @@ def _analizador(settings: Settings, con) -> Analizador | None:
         log.warning("Análisis con cámara no disponible: no hay servicio de visión configurado.")
         return None
     try:
-        return Analizador(vision.crear_vision(settings), segment.crear_segmentador(settings),
-                          lambda: db.param(con, "umbrales", UMBRALES_INICIALES))
+        return Analizador(vision.crear_vision(settings, lambda: foods.catalogo(con)), segment.crear_segmentador(settings),
+                          lambda: db.param(con, "umbrales", UMBRALES_INICIALES),
+                          catalogo=lambda: foods.catalogo(con))
     except Exception as e:
         log.warning("Análisis con cámara no disponible: %s", e)
         return None
@@ -50,6 +51,7 @@ def crear_app(settings: Settings) -> FastAPI:
     app.include_router(routes_verify.router)
     app.include_router(routes_students.router)
     app.include_router(routes_history.router)
+    app.include_router(routes_admin.router)
 
     @app.get("/salud")
     def salud() -> dict:

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Parámetros · NutriPAE{% endblock %}
+{% block content %}
+<main class="np-admin">
+  <h1 class="np-h">Administración</h1>
+  {% include "_admin_tabs.html" %}
+
+  {% if mensaje %}<p class="np-ok" role="status"><span aria-hidden="true">✓</span> {{ mensaje }}</p>{% endif %}
+  {% if error %}<p class="np-error" role="alert"><span aria-hidden="true">✕</span> {{ error }}</p>{% endif %}
+
+  <form method="post" action="/admin/parametros" class="np-card np-admin-form">
+    <h2>Umbrales del plato</h2>
+    <p class="np-sub">Los cambios se aplican a la siguiente verificación.</p>
+    <fieldset>
+      <legend>Proporción objetivo del plato (entre 0 y 1)</legend>
+      <label for="objetivo_verdura_fruta">Verdura y fruta</label>
+      <input id="objetivo_verdura_fruta" name="objetivo_verdura_fruta" type="number" step="0.01" min="0.01" max="1" value="{{ v.objetivo_verdura_fruta }}">
+      <label for="objetivo_proteina">Proteína</label>
+      <input id="objetivo_proteina" name="objetivo_proteina" type="number" step="0.01" min="0.01" max="1" value="{{ v.objetivo_proteina }}">
+      <label for="objetivo_energetico">Energéticos</label>
+      <input id="objetivo_energetico" name="objetivo_energetico" type="number" step="0.01" min="0.01" max="1" value="{{ v.objetivo_energetico }}">
+    </fieldset>
+    <fieldset>
+      <legend>Cuándo un grupo se queda corto o se pasa</legend>
+      <label for="factor_corto">Factor de “corto” (por debajo de este valor del objetivo)</label>
+      <input id="factor_corto" name="factor_corto" type="number" step="0.01" min="0.01" value="{{ v.factor_corto }}">
+      <label for="factor_excedido">Factor de “excedido” (por encima de este valor del objetivo)</label>
+      <input id="factor_excedido" name="factor_excedido" type="number" step="0.01" min="0.01" value="{{ v.factor_excedido }}">
+    </fieldset>
+    <fieldset>
+      <legend>Peso mínimo del plato (gramos)</legend>
+      <label for="plato_minimo_preescolar">Preescolar</label>
+      <input id="plato_minimo_preescolar" name="plato_minimo_preescolar" type="number" step="1" min="1" value="{{ v.plato_minimo_preescolar }}">
+      <label for="plato_minimo_primaria">Primaria</label>
+      <input id="plato_minimo_primaria" name="plato_minimo_primaria" type="number" step="1" min="1" value="{{ v.plato_minimo_primaria }}">
+      <label for="plato_minimo_secundaria">Secundaria</label>
+      <input id="plato_minimo_secundaria" name="plato_minimo_secundaria" type="number" step="1" min="1" value="{{ v.plato_minimo_secundaria }}">
+    </fieldset>
+    <button type="submit" class="np-btn">Guardar</button>
+  </form>
+  <form method="post" action="/admin/parametros/restablecer" class="np-card">
+    <button type="submit" class="np-btn-sec">Restablecer valores iniciales</button>
+  </form>
+
+  <section class="np-card">
+    <h2>Alimentos</h2>
+    <table class="np-admin-tabla">
+      <thead><tr><th>Identificador</th><th>Nombre</th><th>Grupo</th><th></th></tr></thead>
+      <tbody>
+      {% for a in catalogo %}
+        <tr>
+          <td><code>{{ a.clave }}</code></td>
+          <td>{{ a.nombre }}</td>
+          <td>{{ a.grupo }}</td>
+          <td>
+            {% if a.extra %}
+            <form method="post" action="/admin/parametros/alimentos/{{ a.clave|urlencode }}/quitar">
+              <button type="submit" class="np-btn-sec np-admin-baja">Quitar</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <form method="post" action="/admin/parametros/alimentos" class="np-card np-admin-form">
+    <h2>Agregar alimento</h2>
+    <p class="np-sub">Los alimentos agregados cuentan para el grupo del plato, pero no aportan nutrientes.</p>
+    <label for="clave">Identificador (letras minúsculas, números y _)</label>
+    <input id="clave" name="clave" required pattern="[a-z0-9_]{2,40}" autocomplete="off">
+    <label for="nombre_alimento">Nombre</label>
+    <input id="nombre_alimento" name="nombre" required>
+    <label for="grupo">Grupo</label>
+    <select id="grupo" name="grupo" required>
+      {% for g, etiqueta in grupos %}<option value="{{ g }}">{{ etiqueta }}</option>{% endfor %}
+    </select>
+    <button type="submit" class="np-btn">Agregar alimento</button>
+  </form>
+</main>
+{% endblock %}

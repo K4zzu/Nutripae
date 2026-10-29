@@ -89,7 +89,8 @@ def api_verificar(request: Request, usuario=Depends(auth.requiere(*ROLES_VERIFIC
 
     if modo == "demo":
         try:
-            analizador = Analizador(VisionDemo(escenario), SegmentadorElipses(), _umbrales(con))
+            analizador = Analizador(VisionDemo(escenario), SegmentadorElipses(), _umbrales(con),
+                                  catalogo=lambda: foods.catalogo(con))
         except ValueError:
             return _error(400, "escenario", "Esa situación de práctica no existe.")
     elif modo == "camara":
@@ -167,8 +168,8 @@ def api_corregir(vid: int, cuerpo: Correccion, request: Request,
 
 
 @router.get("/api/alimentos")
-def api_alimentos(usuario=Depends(auth.requiere(*ROLES_VERIFICAR))) -> list[dict]:
-    lista = [{"clave": k, "nombre": n, "grupo": g} for k, (n, g) in foods.catalogo().items()]
+def api_alimentos(request: Request, usuario=Depends(auth.requiere(*ROLES_VERIFICAR))) -> list[dict]:
+    lista = [{"clave": k, "nombre": n, "grupo": g} for k, (n, g) in foods.catalogo(request.app.state.con).items()]
     return sorted(lista, key=lambda a: a["nombre"])
 
 

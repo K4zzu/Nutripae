@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Usuarios · NutriPAE{% endblock %}
+{% block content %}
+<main class="np-admin">
+  <h1 class="np-h">Administración</h1>
+  {% include "_admin_tabs.html" %}
+
+  {% if mensaje %}<p class="np-ok" role="status"><span aria-hidden="true">✓</span> {{ mensaje }}</p>{% endif %}
+  {% if error %}<p class="np-error" role="alert"><span aria-hidden="true">✕</span> {{ error }}</p>{% endif %}
+
+  <form method="post" action="/admin/usuarios" class="np-card np-admin-form">
+    <h2>Nuevo usuario</h2>
+    <label for="usuario">Usuario</label>
+    <input id="usuario" name="usuario" required autocomplete="off" value="{{ previo.get('usuario', '') }}">
+    <label for="nombre">Nombre</label>
+    <input id="nombre" name="nombre" required value="{{ previo.get('nombre', '') }}">
+    <label for="contrasena">Contraseña (mínimo 6 caracteres)</label>
+    <input id="contrasena" name="contrasena" type="password" minlength="6" required autocomplete="new-password">
+    <fieldset>
+      <legend>Roles</legend>
+      {% for r in roles %}
+      <label class="np-check"><input type="checkbox" name="roles" value="{{ r }}"{% if r in previo.get('roles', []) %} checked{% endif %}> {{ r|capitalize }}</label>
+      {% endfor %}
+    </fieldset>
+    <fieldset>
+      <legend>Sedes</legend>
+      {% for s in sedes %}
+      <label class="np-check"><input type="checkbox" name="sedes" value="{{ s }}"{% if s in previo.get('sedes', []) %} checked{% endif %}> {{ s }}</label>
+      {% else %}
+      <p class="np-sub">Todavía no hay sedes cargadas. Escribe una abajo.</p>
+      {% endfor %}
+      <label for="otra_sede">Otra sede</label>
+      <input id="otra_sede" name="otra_sede" autocomplete="off">
+    </fieldset>
+    <button type="submit" class="np-btn">Crear usuario</button>
+  </form>
+
+  <section class="np-card">
+    <h2>Usuarios</h2>
+    <table class="np-admin-tabla">
+      <thead><tr><th>Usuario</th><th>Nombre</th><th>Roles</th><th>Sedes</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+      {% for u in usuarios %}
+        <tr>
+          <td>{{ u.usuario }}</td>
+          <td>{{ u.nombre }}</td>
+          <td>{{ u.roles|join(", ") }}</td>
+          <td>{{ u.sedes|join(", ") or "—" }}</td>
+          <td>{% if u.activo %}<span aria-hidden="true">✓</span> Activo{% else %}<span aria-hidden="true">✕</span> Inactivo{% endif %}</td>
+          <td>
+            {% if u.activo and u.id != yo %}
+            <form method="post" action="/admin/usuarios/{{ u.id }}/desactivar">
+              <button type="submit" class="np-btn-sec np-admin-baja">Desactivar</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</main>
+{% endblock %}

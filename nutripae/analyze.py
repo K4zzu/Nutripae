@@ -30,11 +30,12 @@ class Analisis:
 
 
 class Analizador:
-    def __init__(self, vision: Vision, segmentador: Segmentador, umbrales, espera_s: float = 20):
+    def __init__(self, vision: Vision, segmentador: Segmentador, umbrales, espera_s: float = 20, catalogo=None):
         self._vision = vision
         self._segmentador = segmentador
         self._umbrales = umbrales  # dict o función sin argumentos que lo devuelve
         self._espera_s = espera_s
+        self._catalogo = catalogo  # función sin argumentos con el catálogo vigente; None = el propio
         self._sem = threading.BoundedSemaphore(1)
 
     def analizar(self, imagen: Image.Image, grado: str, nombre: str | None) -> Analisis:
@@ -50,7 +51,7 @@ class Analizador:
                 regiones = self._segmentador.segmentar_desde([d.bbox for d in resultado.detecciones])
             else:
                 regiones = self._segmentador.segmentar(imagen)
-            porciones = fuse.cruzar(resultado.detecciones, regiones)
+            porciones = fuse.cruzar(resultado.detecciones, regiones, self._catalogo() if self._catalogo else None)
             umbrales = self._umbrales() if callable(self._umbrales) else self._umbrales
             veredicto = balance.evaluar(porciones, grado, umbrales)
             titulo, detalle = messages.mensaje(veredicto, nombre, grado=grado)

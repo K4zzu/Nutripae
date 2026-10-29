@@ -25,8 +25,9 @@ def _iou(a, b):
     return inter / union if union > 0 else 0.0
 
 
-def cruzar(detecciones: list[Deteccion], regiones: list[Region]) -> list[Porcion]:
-    catalogo = foods.catalogo()
+def cruzar(detecciones: list[Deteccion], regiones: list[Region], catalogo: dict | None = None) -> list[Porcion]:
+    if catalogo is None:
+        catalogo = foods.catalogo()
     usadas: set[int] = set()
     porciones = []
     for d in detecciones:
@@ -44,7 +45,7 @@ def cruzar(detecciones: list[Deteccion], regiones: list[Region]) -> list[Porcion
             nombre = d.nombre
         else:
             nombre = catalogo[d.alimento][0]
-        porciones.append(Porcion(d.alimento, nombre, foods.grupo_de(d.alimento), d.gramos,
+        porciones.append(Porcion(d.alimento, nombre, catalogo[d.alimento][1] if d.alimento in catalogo else "otro", d.gramos,
                                  apto=d.apto, observacion=d.observacion, poligono=poligono,
                                  bbox=tuple(float(v) for v in d.bbox), aproximado=aproximado))
     return porciones

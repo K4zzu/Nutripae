@@ -22,8 +22,7 @@ GRUPO_COLOR = {
 _GRUPO_TABLA = {"cereal": "energetico", "tuberculo": "energetico"}
 
 
-def grupo_de(clave: str) -> str:
-    """Grupo del plato de un alimento; clave desconocida -> 'otro'."""
+def _grupo_tabla(clave: str) -> str:
     a = nutrition.TABLA.get(clave)
     if a is None:
         return "otro"
@@ -31,6 +30,26 @@ def grupo_de(clave: str) -> str:
     return g if g in GRUPOS else "otro"
 
 
-def catalogo() -> dict[str, tuple[str, str]]:
-    """clave -> (nombre, grupo)."""
-    return {k: (a.nombre, grupo_de(k)) for k, a in nutrition.TABLA.items()}
+def extras(con) -> list[dict]:
+    """Alimentos que el administrador añadió (sin datos de nutrientes); nunca pisan los propios."""
+    from nutripae import db
+    return [e for e in db.param(con, "alimentos_extra", [])
+            if e["clave"] not in nutrition.TABLA and e["grupo"] in GRUPOS]
+
+
+def grupo_de(clave: str, con=None) -> str:
+    """Grupo del plato de un alimento; clave desconocida -> 'otro'. Con `con` incluye los extras."""
+    if clave not in nutrition.TABLA and con is not None:
+        for e in extras(con):
+            if e["clave"] == clave:
+                return e["grupo"]
+    return _grupo_tabla(clave)
+
+
+def catalogo(con=None) -> dict[str, tuple[str, str]]:
+    """clave -> (nombre, grupo). Con `con` se fusionan los alimentos extra."""
+    cat = {k: (a.nombre, _grupo_tabla(k)) for k, a in nutrition.TABLA.items()}
+    if con is not None:
+        for e in extras(con):
+            cat[e["clave"]] = (e["nombre"], e["grupo"])
+    return cat

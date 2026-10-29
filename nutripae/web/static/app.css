@@ -262,3 +262,19 @@ body { margin: 0; background: var(--bg); }
 @media (prefers-reduced-motion: reduce) {
   .np-inicio p, .np-v-pide-tarjeta .np-v-semaforo, .np-v-escaner { animation: none; }
 }
+
+/* Administración: pestañas y formularios */
+.np-admin-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 12px; }
+.np-admin-tabs a { min-height: 44px; display: inline-flex; align-items: center; padding: 0 20px; border-radius: 999px;
+  font: 700 16px var(--sans); color: var(--morado); background: var(--suave); text-decoration: none; }
+.np-admin-tabs a[aria-current="page"] { background: var(--morado); color: #fff; }
+.np-admin > .np-card { margin-top: 20px; }
+.np-admin-form { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.np-admin-form h2 { margin: 0; font-size: 24px; }
+.np-admin-form label { font: 700 15px var(--sans); color: var(--tinta2); }
+.np-admin-form input:not([type="checkbox"]), .np-admin-form select { min-height: 44px; padding: 0 14px; border-radius: 14px;
+  border: 2px solid var(--suave); font: 600 16px var(--sans); width: min(100%, 360px); }
+.np-admin-form fieldset { border: 0; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 6px; }
+.np-admin-form legend { font: 600 18px var(--titulos); color: var(--morado); padding: 0; margin-bottom: 4px; }
+.np-check { display: flex; align-items: center; gap: 8px; min-height: 36px; }
+.np-check input { width: 20px; height: 20px; }

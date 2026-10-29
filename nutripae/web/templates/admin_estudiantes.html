@@ -3,6 +3,7 @@
 {% block content %}
 <main class="np-admin">
   <h1 class="np-h">Estudiantes</h1>
+  {% include "_admin_tabs.html" %}
 
   {% if mensaje %}<p class="np-ok" role="status"><span aria-hidden="true">✓</span> {{ mensaje }}</p>{% endif %}
   {% if error %}<p class="np-error" role="alert"><span aria-hidden="true">✕</span> {{ error }}</p>{% endif %}
