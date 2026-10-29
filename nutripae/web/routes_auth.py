@@ -39,12 +39,7 @@ def raiz():
     return RedirectResponse("/verificar", status_code=302)
 
 
-# provisional: la Tarea 10 reemplaza /verificar y la Tarea 11 reemplaza /admin/estudiantes
-@router.get("/verificar")
-def verificar_provisional(usuario=Depends(auth.usuario_actual)) -> dict:
-    return {"ok": True}
-
-
+# provisional: la Tarea 11 reemplaza /admin/estudiantes
 @router.get("/admin/estudiantes")
 def estudiantes_provisional(usuario=Depends(auth.requiere("admin"))) -> dict:
     return {"ok": True}

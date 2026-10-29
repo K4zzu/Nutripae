@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Verificación · NutriPAE{% endblock %}
+{% block content %}
+<main class="np-v" id="pantalla" data-estado="esperando">
+
+  <!-- Capa del niño: grande, legible a dos metros -->
+  <section class="np-v-nino" aria-live="polite">
+    <div class="np-camara np-v-vista">
+      <video id="video" class="np-v-video" autoplay muted playsinline></video>
+      <img id="foto" class="np-v-foto" alt="Foto de tu plato con cada alimento marcado" hidden>
+      <canvas id="toques" class="np-v-toques" hidden></canvas>
+      <div id="escaner" class="np-v-escaner" aria-hidden="true"></div>
+      <p id="camara-aviso" class="np-v-camara-aviso" hidden></p>
+    </div>
+
+    <div id="semaforo" class="np-v-semaforo" data-semaforo="espera">
+      <div class="np-v-icono" id="icono" aria-hidden="true">
+        <svg viewBox="0 0 48 48" width="56" height="56"><rect x="6" y="14" width="36" height="24" rx="6" fill="none" stroke="currentColor" stroke-width="4"/><path d="M14 14v-4h20v4" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
+      </div>
+      <h1 id="titulo" class="np-v-titulo">Coloca la bandeja</h1>
+      <p id="detalle" class="np-v-detalle">Pon tu tarjeta sobre la bandeja.</p>
+    </div>
+  </section>
+
+  <!-- Capa de la docente: pequeña, abajo -->
+  <section class="np-v-docente" aria-label="Detalle para la docente">
+    <div class="np-v-barra">
+      <p id="lectura" class="np-v-lectura"><span aria-hidden="true">▢</span> Sin tarjeta leída</p>
+      <div class="np-v-acciones">
+        <button type="button" id="btn-capturar" class="np-btn np-v-capturar" hidden>Capturar</button>
+        <button type="button" id="btn-siguiente" class="np-btn-sec">Siguiente</button>
+        <button type="button" id="btn-corregir" class="np-btn-sec" disabled>Corregir</button>
+        <button type="button" id="btn-buscar" class="np-btn-sec">Buscar</button>
+      </div>
+    </div>
+
+    <div class="np-v-cuerpo">
+      <div class="np-card np-v-tabla-caja">
+        <h2 class="np-h">Alimentos del plato</h2>
+        <table class="np-v-tabla">
+          <thead><tr><th>Alimento</th><th>Grupo</th><th>Gramos</th><th>Estado</th></tr></thead>
+          <tbody id="porciones"><tr><td colspan="4" class="np-sub">Esperando una bandeja.</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="np-card np-v-nutrientes-caja">
+        <h2 class="np-h">Nutrientes del plato</h2>
+        <dl id="nutrientes" class="np-v-nutrientes"></dl>
+        <p id="total" class="np-sub"></p>
+      </div>
+
+      <div class="np-card np-v-practica">
+        <label class="np-v-interruptor">
+          <input type="checkbox" id="practica">
+          <span>Práctica sin cámara</span>
+        </label>
+        <label for="situacion" class="np-sub">Situación</label>
+        <select id="situacion">
+          <option value="completa">Plato completo</option>
+          <option value="falta_grupo">Falta un grupo</option>
+          <option value="incompleta">Porción corta</option>
+          <option value="no_apto">Alimento en mal estado</option>
+        </select>
+        <label for="grado-sin-estudiante" class="np-sub">Grado si no hay estudiante</label>
+        <select id="grado-sin-estudiante">
+          {% for g in grados %}<option value="{{ g }}"{% if g == "primaria" %} selected{% endif %}>{{ g|capitalize }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div id="panel-buscar" class="np-card np-v-panel" hidden>
+      <div class="np-v-panel-cabeza">
+        <h2 class="np-h">Buscar estudiante</h2>
+        <button type="button" class="np-v-cerrar" data-cerrar="panel-buscar" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="np-v-buscar-form">
+        <input id="buscar-q" type="search" placeholder="Nombre" autocomplete="off">
+        <select id="buscar-grado">
+          {% for g in grados %}<option value="{{ g }}"{% if g == "primaria" %} selected{% endif %}>{{ g|capitalize }}</option>{% endfor %}
+        </select>
+      </div>
+      <ul id="buscar-lista" class="np-v-lista"></ul>
+    </div>
+
+    <div id="panel-corregir" class="np-card np-v-panel" hidden>
+      <div class="np-v-panel-cabeza">
+        <h2 class="np-h">Corregir alimentos</h2>
+        <button type="button" class="np-v-cerrar" data-cerrar="panel-corregir" aria-label="Cerrar">✕</button>
+      </div>
+      <p class="np-sub">Cambia el alimento que no corresponde. Queda registrado como corrección.</p>
+      <ul id="corregir-lista" class="np-v-lista"></ul>
+    </div>
+
+    <form method="post" action="/salir" class="np-v-salir">
+      <span class="np-sub">{{ usuario["nombre"] or usuario["usuario"] }}</span>
+      <button type="submit" class="np-v-enlace">Salir</button>
+    </form>
+  </section>
+</main>
+<canvas id="lienzo" hidden></canvas>
+<script src="/static/jsQR.js"></script>
+<script src="/static/verificar.js"></script>
+{% endblock %}
