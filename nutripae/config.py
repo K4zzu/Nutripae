@@ -12,6 +12,24 @@ log = logging.getLogger("nutripae")
 
 SECRETO_POR_DEFECTO = "cambia-esta-clave"
 
+# Orden de detección del proveedor de la IA de visión y la variable de su clave.
+CLAVE_PROVEEDOR = {"openai": "OPENAI_API_KEY", "anthropic": "ANTHROPIC_API_KEY", "gemini": "GEMINI_API_KEY"}
+
+
+def _proveedor() -> str | None:
+    """El de NUTRIPAE_PROVEEDOR si tiene clave; si no, el primero con clave; None = solo práctica."""
+    pedido = (os.getenv("NUTRIPAE_PROVEEDOR") or "").strip().lower() or None
+    if pedido is not None:
+        variable = CLAVE_PROVEEDOR.get(pedido)
+        if variable and os.getenv(variable):
+            return pedido
+        log.warning("NUTRIPAE_PROVEEDOR=%s no tiene clave (%s); se detecta el proveedor por las claves presentes.",
+                    pedido, variable or "proveedor desconocido")
+    for nombre, variable in CLAVE_PROVEEDOR.items():
+        if os.getenv(variable):
+            return nombre
+    return None
+
 
 @dataclass
 class Settings:
@@ -36,7 +54,7 @@ def cargar() -> Settings:
         secret=secret,
         db_path=Path(os.getenv("NUTRIPAE_DB", "data/nutripae.db")),
         fotos_dir=Path(os.getenv("NUTRIPAE_FOTOS", "data/fotos")),
-        proveedor=os.getenv("NUTRIPAE_PROVEEDOR") or None,
+        proveedor=_proveedor(),
         modelo=os.getenv("NUTRIPAE_MODELO") or None,
         muestra_entrenamiento_dia=int(os.getenv("NUTRIPAE_MUESTRA_DIA", "50")),
         segmentador=os.getenv("NUTRIPAE_SEGMENTADOR", "fastsam"),

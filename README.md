@@ -76,10 +76,10 @@ La prueba que carga FastSAM de verdad se salta si `ultralytics` no está instala
 
 | Modo | Cómo se activa | Para qué |
 |---|---|---|
-| **IA** | `NUTRIPAE_PROVEEDOR` y su clave en el `.env`, con `NUTRIPAE_SEGMENTADOR=fastsam` (por defecto) | Uso real. FastSAM recorta los contornos del plato y la IA de visión nombra cada alimento, estima gramos y marca mal aspecto. |
+| **IA** | Una clave de IA de visión en el `.env`, con `NUTRIPAE_SEGMENTADOR=fastsam` (por defecto) | Uso real. FastSAM recorta los contornos del plato y la IA de visión nombra cada alimento, estima gramos y marca mal aspecto. |
 | **Práctica sin cámara** | Casilla en la pantalla de verificación | Presentar o capacitar sin cámara ni internet, con un plato simulado. Esos registros quedan marcados y **nunca entran al historial** de ningún niño. |
 
-Sin `NUTRIPAE_PROVEEDOR` el servidor no analiza fotos de la cámara y solo queda la práctica. La interfaz nunca
+Sin ninguna clave de IA de visión el servidor no analiza fotos de la cámara y solo queda la práctica. La interfaz nunca
 muestra claves, proveedores ni configuración técnica: todo se configura en el servidor.
 
 Si la IA detecta una **persona** en la foto, la toma se descarta y se pide repetir. El análisis corre de a uno por
@@ -148,8 +148,8 @@ nutricionista ve además el resumen por sede: platos verdes por día, el grupo q
 | Variable | Uso |
 |---|---|
 | `NUTRIPAE_SECRET` | Firma la sesión y la huella de los documentos. **Obligatoria en producción** y estable durante el piloto. |
-| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` | Clave de la IA de visión; basta la del proveedor elegido. Para Claude o Gemini instala además `anthropic` o `google-genai`. |
-| `NUTRIPAE_PROVEEDOR` | `openai`, `anthropic` o `gemini`. Sin ella no hay análisis con cámara. |
+| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` | Clave de la IA de visión; basta una. Sin ninguna solo hay práctica. Para Claude o Gemini instala además `anthropic` o `google-genai`. |
+| `NUTRIPAE_PROVEEDOR` | Opcional: `openai`, `anthropic` o `gemini`. Por defecto se detecta por la clave presente, en ese orden. Si el elegido no tiene clave, se avisa en el registro y se usa la detección. |
 | `NUTRIPAE_MODELO` | Opcional. Por defecto `gpt-4.1-mini`, `claude-sonnet-5-5` o `gemini-2.5-flash`. |
 | `NUTRIPAE_SEGMENTADOR` | `fastsam` (por defecto) o `demo`, contornos simulados sin PyTorch para pruebas. |
 | `NUTRIPAE_MUESTRA_DIA` | Originales que se guardan por día y sede para entrenar el modelo propio. Por defecto 50. |
@@ -165,7 +165,7 @@ El `.env` está en `.gitignore`: nunca se sube al repositorio.
 git clone <tu-repo> /home/ubuntu/nutripae && cd /home/ubuntu/nutripae
 chmod +x deploy/setup_lightsail.sh
 sudo NUTRIPAE_ADMIN=admin NUTRIPAE_ADMIN_PASS='una-clave-larga' deploy/setup_lightsail.sh tu-dominio.edu.co
-nano .env                                   # OPENAI_API_KEY y NUTRIPAE_PROVEEDOR
+nano .env                                   # OPENAI_API_KEY (u otra clave de IA de visión)
 sudo systemctl restart nutripae
 sudo apt install -y certbot python3-certbot-nginx && sudo certbot --nginx -d tu-dominio.edu.co
 ```
