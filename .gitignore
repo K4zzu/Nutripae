@@ -51,3 +51,6 @@ desktop.ini
 
 # --- Logs ---
 *.log
+
+# --- Espacio de trabajo de planes (superpowers) ---
+.superpowers/
