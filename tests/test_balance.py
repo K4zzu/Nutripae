@@ -49,3 +49,10 @@ def test_alimento_desconocido_entra_como_otro_sin_nutrientes():
     v = evaluar([p("sancocho", 200), p("pollo_guisado", 90), p("arroz_blanco", 90), p("ensalada_fresca", 100), p("banano", 80)], "primaria")
     assert any(x.alimento == "sancocho" and x.grupo == "otro" for x in v.porciones)
     assert v.nutrientes["kcal"] > 0
+
+
+def test_porciones_repetidas_suman_sus_nutrientes():
+    base = [p("pollo_guisado", 90), p("arroz_blanco", 90), p("ensalada_fresca", 100)]
+    dos = evaluar(base + [p("banano", 40), p("banano", 40)], "primaria")
+    una = evaluar([p("pollo_guisado", 90), p("arroz_blanco", 90), p("ensalada_fresca", 100), p("banano", 80)], "primaria")
+    assert dos.nutrientes == una.nutrientes

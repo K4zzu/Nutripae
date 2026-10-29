@@ -105,5 +105,9 @@ def evaluar(porciones: list[Porcion], grado: str, umbrales: dict = UMBRALES_INIC
     else:
         sem, rg, rt = "verde", None, None
 
-    nutr = nutrition.sumar({x.alimento: x.gramos for x in porciones if x.apto and x.gramos > 0})
+    por_alimento: dict[str, float] = {}
+    for x in porciones:
+        if x.apto and x.gramos > 0:
+            por_alimento[x.alimento] = por_alimento.get(x.alimento, 0.0) + x.gramos
+    nutr = nutrition.sumar(por_alimento)
     return Veredicto(sem, rg, rt, porciones, total, props, nutr)
