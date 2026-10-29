@@ -203,8 +203,18 @@ Los textos actuales de "sin datos personales, código anónimo" se retiran de la
 - **Despliegue**: la instancia Lightsail de 12 USD (2 GB RAM) que ya existe, con **dominio y HTTPS obligatorios**
   (sin HTTPS el navegador no permite la cámara) y **2 GB de swap** porque `torch` + FastSAM usan cerca de 1 GB al
   analizar. Si en el piloto se queda corta, se sube al plan de 4 GB.
-- **Sistema de diseño**: se conserva el de la v1 (paleta verde/crema, Atkinson Hyperlegible, semáforo con ícono,
-  botones de kiosco) y se adapta a las pantallas nuevas.
+- **Sistema de diseño**: se reemplaza el de la v1 por la identidad visual del equipo (abajo). Se conservan las reglas
+  de producto: semáforo con ícono además de color, botones de kiosco de 88 px, texto del veredicto legible a dos metros.
+
+**Identidad visual NutriPAE (2026-10-29, recursos del equipo en `docs/identidad/` y `nutripae/web/static/img/`)**
+- Logotipo: "NutriPAE" con lápiz y sonrisa (`logo.png` sin fondo para la app; `docs/identidad/logo-fondo-blanco.png` para PDF). Icono: el lápiz (`icono.png`, `favicon.png`).
+- Paleta: morado `#4C17C1` (principal, títulos, botones), verde `#23D098`, amarillo `#FAC344`, rojo lápiz `#EE3B5A`, azul `#1C3F9E`; tinta `#1F1A3D`, tinta secundaria `#5A557A`, línea `#E6E2F5`, fondo blanco `#FFFFFF` con superficie suave `#F7F5FF`. Tonos oscuros para texto sobre blanco: verde `#13A676`, amarillo `#B8820A`, rojo `#B81F3C`; tonos claros para fondos de estado: `#DFF8EE`, `#FFF4D6`, `#FFE1E6`, morado claro `#EEE8FB`.
+- Semáforo (siempre con ícono): verde = fondo `#23D098` con texto tinta; amarillo = fondo `#FAC344` con texto tinta; rojo = fondo `#E02E4D` con texto blanco. No apto: `#B81F3C`.
+- Grupos sobre la foto: proteína `#EE3B5A`, energéticos `#FAC344`, verdura `#23D098`, fruta `#4C17C1`, bebida `#1C3F9E`, otro `#9A96B3`.
+- Tipografía (Google Fonts): **Fredoka** 500–700 para títulos, veredicto y botones; **Nunito** 400–800 para el cuerpo.
+- Forma: esquinas muy redondeadas (tarjetas 24 px, botones y chips 999 px), manchas orgánicas amarillas y verdes en las esquinas de las pantallas de inicio, sin bordes duros ni grises fríos.
+- Estación: pantalla de inicio a pantalla completa con el logotipo y "Toca para comenzar" (el toque pide el permiso de cámara); vuelve a ella tras 2 min sin actividad.
+
 - **Modo demostración**: se mantiene para presentar sin cámara ni internet (plato simulado), elegible por el
   usuario; nunca visible al niño como "demo". Los registros del modo demostración se marcan y no entran en el
   historial de ningún niño real.
