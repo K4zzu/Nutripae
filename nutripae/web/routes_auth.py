@@ -1,7 +1,7 @@
 """Rutas de inicio y cierre de sesión."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
 
 from nutripae import auth
@@ -38,8 +38,3 @@ def salir(request: Request):
 def raiz():
     return RedirectResponse("/verificar", status_code=302)
 
-
-# provisional: la Tarea 11 reemplaza /admin/estudiantes
-@router.get("/admin/estudiantes")
-def estudiantes_provisional(usuario=Depends(auth.requiere("admin"))) -> dict:
-    return {"ok": True}

@@ -13,7 +13,7 @@ from nutripae import db, segment, vision
 from nutripae.analyze import Analizador
 from nutripae.balance import UMBRALES_INICIALES
 from nutripae.config import Settings, log
-from nutripae.web import routes_auth, routes_verify
+from nutripae.web import routes_auth, routes_students, routes_verify
 
 BASE = Path(__file__).parent
 
@@ -46,6 +46,7 @@ def crear_app(settings: Settings) -> FastAPI:
                        same_site="lax", https_only=False)
     app.include_router(routes_auth.router)
     app.include_router(routes_verify.router)
+    app.include_router(routes_students.router)
 
     @app.get("/salud")
     def salud() -> dict:

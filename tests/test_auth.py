@@ -45,7 +45,7 @@ def test_admin_entra_salir_y_raiz(client, settings):
     assert "Usuario o contraseña incorrectos" in client.post(
         "/entrar", data={"usuario": "ad", "contrasena": "no"}).text
     client.post("/entrar", data={"usuario": "ad", "contrasena": "pw"})
-    assert client.get("/admin/estudiantes").json() == {"ok": True}
+    assert "Estudiantes" in client.get("/admin/estudiantes").text
     r = client.get("/", follow_redirects=False)
     assert r.status_code == 302 and r.headers["location"] == "/verificar"
     r = client.post("/salir", follow_redirects=False)

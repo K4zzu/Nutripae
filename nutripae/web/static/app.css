@@ -144,3 +144,12 @@ body { margin: 0; background: var(--bg); }
   /* con el veredicto, el semáforo queda primero para que el niño lo vea al girar el teléfono */
   .np-v[data-estado="veredicto"] .np-v-semaforo { order: -1; }
 }
+
+/* Administración de estudiantes */
+.np-nav{display:flex;gap:16px;padding:12px 20px;background:#E3F0E7}
+.np-nav a{color:#145236;font-weight:600;text-decoration:none}
+.np-admin{max-width:960px;margin:0 auto;padding:20px}
+.np-admin-carga,.np-admin-sede{margin-top:20px}
+.np-admin-tabla{width:100%;border-collapse:collapse}
+.np-admin-tabla th,.np-admin-tabla td{text-align:left;padding:8px;border-bottom:1px solid #E3DDD1}
+.np-ok{color:#145236;font-weight:600}

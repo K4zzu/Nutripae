@@ -10,6 +10,9 @@
   <link rel="stylesheet" href="/static/app.css">
 </head>
 <body class="np">
+  {% if request and request.state.roles and "admin" in request.state.roles %}
+  <nav class="np-nav" aria-label="Administración"><a href="/verificar">Verificar</a> <a href="/admin/estudiantes">Estudiantes</a></nav>
+  {% endif %}
   {% block content %}{% endblock %}
 </body>
 </html>

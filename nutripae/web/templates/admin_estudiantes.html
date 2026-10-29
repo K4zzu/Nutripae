@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Estudiantes · NutriPAE{% endblock %}
+{% block content %}
+<main class="np-admin">
+  <h1 class="np-h">Estudiantes</h1>
+
+  {% if mensaje %}<p class="np-ok" role="status"><span aria-hidden="true">✓</span> {{ mensaje }}</p>{% endif %}
+  {% if error %}<p class="np-error" role="alert"><span aria-hidden="true">✕</span> {{ error }}</p>{% endif %}
+
+  <form method="post" action="/admin/estudiantes/cargar" enctype="multipart/form-data" class="np-card np-admin-carga">
+    <label for="archivo">Lista de estudiantes (Excel)</label>
+    <input id="archivo" name="archivo" type="file" accept=".xlsx" required>
+    <p class="np-sub">Columnas: código, nombre, grado, sede. Opcionales: grupo, consentimiento.</p>
+    <button type="submit" class="np-btn">Cargar lista</button>
+  </form>
+
+  {% for sede, grupos in sedes %}
+  <section class="np-card np-admin-sede">
+    <h2>{{ sede }}</h2>
+    {% for clave, lista in grupos %}
+    <h3>{{ clave[0]|capitalize }} · {{ clave[1] }}</h3>
+    <table class="np-admin-tabla">
+      <thead><tr><th>Nombre</th><th>Consentimiento</th><th>Tarjeta</th><th></th></tr></thead>
+      <tbody>
+      {% for e in lista %}
+        <tr>
+          <td>{{ e.nombre }}</td>
+          <td>
+            <form method="post" action="/admin/estudiantes/{{ e.id }}/consentimiento">
+              <input type="hidden" name="valor" value="{{ 0 if e.consentimiento else 1 }}">
+              <button type="submit" class="np-btn-sec" aria-pressed="{{ 'true' if e.consentimiento else 'false' }}">
+                {% if e.consentimiento %}<span aria-hidden="true">✓</span> Sí{% else %}<span aria-hidden="true">✕</span> No{% endif %}
+              </button>
+            </form>
+          </td>
+          <td>{% if e.tiene_tarjeta %}<span aria-hidden="true">✓</span> Con tarjeta{% else %}<span aria-hidden="true">—</span> Sin tarjeta{% endif %}</td>
+          <td>
+            <form method="post" action="/admin/estudiantes/{{ e.id }}/baja">
+              <button type="submit" class="np-btn-sec">Dar de baja</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% endfor %}
+  </section>
+  {% else %}
+  <p class="np-sub">Todavía no hay estudiantes. Sube la lista en Excel.</p>
+  {% endfor %}
+</main>
+{% endblock %}
