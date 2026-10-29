@@ -33,6 +33,11 @@
         {% for g in d.presentes %}<span class="np-gchip" style="--c: {{ g.color }}"><i aria-hidden="true"></i><span aria-hidden="true">✓</span> {{ g.label }}</span>{% endfor %}
         {% for g in d.faltantes %}<span class="np-gchip falta" style="--c: {{ g.color }}"><span aria-hidden="true">✕</span> Falta {{ g.label|lower }}</span>{% endfor %}
       </div>
+      {% if d.alimentos %}
+      <div class="np-hist-chips np-hist-alimentos">
+        {% for a in d.alimentos %}<span class="np-gchip" style="--c: {{ a.color }}"><i aria-hidden="true"></i>{% if a.no_apto %}<span aria-hidden="true">—</span> {% endif %}{{ a.nombre }} · {{ a.gramos }} g{% if a.no_apto %} (no apto){% endif %}</span>{% endfor %}
+      </div>
+      {% endif %}
       <div class="np-hist-meta">{{ d.kcal }} calorías</div>
     </div>
     {% if d.ultima.foto %}<a href="/fotos/{{ d.ultima.foto }}"><img class="np-hist-foto" src="/fotos/{{ d.ultima.foto }}" alt="Foto del plato del {{ d.fecha.strftime('%d/%m') }}" loading="lazy"></a>{% endif %}

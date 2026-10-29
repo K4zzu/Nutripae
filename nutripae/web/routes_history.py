@@ -33,6 +33,14 @@ def _grupos(porciones: list[dict]) -> tuple[list[dict], list[dict]]:
     return [chip(g) for g in presentes], [chip(g) for g in dict.fromkeys(faltan)]
 
 
+def _alimentos(porciones: list[dict]) -> list[dict]:
+    """Lo servido ese día como «nombre · gramos g», con el color de su grupo (los faltantes ya se listan aparte)."""
+    return [{"nombre": p.get("nombre") or p.get("alimento", ""), "gramos": round(p.get("gramos") or 0),
+             "no_apto": p.get("estado") == "no_apto",
+             "color": foods.GRUPO_COLOR.get(p.get("grupo"), foods.GRUPO_COLOR["otro"])}
+            for p in porciones if p.get("estado") != "falta"]
+
+
 @router.get("/estudiantes/{estudiante_id}/historial")
 def historial(estudiante_id: int, request: Request, desde: str = "", hasta: str = "",
               usuario=Depends(auth.requiere(*ROLES_VERIFICAR))):
@@ -45,6 +53,7 @@ def historial(estudiante_id: int, request: Request, desde: str = "", hasta: str 
     for d in dias:
         d["etiqueta"] = ETIQUETA.get(d["ultima"]["semaforo"], ("!", d["ultima"]["semaforo"]))
         d["presentes"], d["faltantes"] = _grupos(d["ultima"]["porciones"])
+        d["alimentos"] = _alimentos(d["ultima"]["porciones"])
         d["kcal"] = round(d["ultima"]["nutrientes"].get("kcal", 0))
     history.auditar(con, usuario["id"], "consulta_historial", estudiante_id)
     faltas = [{"label": foods.GRUPO_LABEL.get(g, g), "color": foods.GRUPO_COLOR.get(g, "#9A96B3"), "dias": n}

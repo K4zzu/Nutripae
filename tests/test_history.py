@@ -95,3 +95,21 @@ def test_resumen_roles_y_sede(client, settings):
     r = client.get("/sedes/IE Santa Librada/resumen")
     assert r.status_code == 200 and "Resumen" in r.text
     assert client.get("/sedes/Otra/resumen").status_code == 404
+
+
+def test_historial_muestra_alimentos_y_gramos(client, settings):
+    import json
+    from nutripae import foods
+    login(client, settings, ["docente"])
+    con = db.conectar(settings.db_path)
+    eid = _estudiante(con)
+    porciones = [
+        {"alimento": "arroz_blanco", "nombre": "Arroz con coco", "grupo": "energetico", "gramos": 92.4, "estado": "ok"},
+        {"alimento": "pollo_guisado", "nombre": "Pollo guisado", "grupo": "proteina", "gramos": 61, "estado": "corto"},
+        {"alimento": "falta_verdura", "nombre": "Verdura", "grupo": "verdura", "gramos": 0, "estado": "falta"},
+    ]
+    insertar(con, eid, datetime.now(), "rojo", sede="IE Santa Librada", porciones=json.dumps(porciones))
+    html = client.get(f"/estudiantes/{eid}/historial").text
+    assert "Arroz con coco · 92 g" in html and "Pollo guisado · 61 g" in html
+    assert f"--c: {foods.GRUPO_COLOR['energetico']}" in html
+    assert "Verdura · 0 g" not in html  # el grupo que falta ya se muestra como faltante
