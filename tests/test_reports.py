@@ -28,7 +28,8 @@ def test_parrafo_para_padres(settings):
     insertar(con, 1, datetime(2026, 10, 29, 12), "verde")
     texto = reports.parrafo_padres(con, 1, "Ana Pérez", date(2026, 10, 1), date(2026, 10, 31))
     assert texto.startswith("En estos 2 días, a Ana le sirvieron un plato balanceado 1 de 2 veces.")
-    assert "Lo que más le faltó fue verdura: La verdura te ayuda a crecer fuerte." in texto
+    assert "Lo que más le faltó fue verdura: La verdura le ayuda a crecer fuerte." in texto
+    assert " te " not in texto
     insertar(con, 1, datetime(2026, 10, 30, 12), "verde")
     sin = reports.parrafo_padres(con, 1, "Ana Pérez", date(2026, 10, 29), date(2026, 10, 31))
     assert "No le faltó ningún grupo de alimentos. ¡Muy bien!" in sin
@@ -66,3 +67,10 @@ def test_ruta_pdf_otra_sede_404(client, settings):
     _ana(con, sede="Otra")
     assert client.get("/estudiantes/1/historial.pdf").status_code == 404
     assert con.execute("select count(*) from auditoria where accion='pdf_historial'").fetchone()[0] == 0
+
+
+def test_parrafo_familia_directo():
+    t = reports.parrafo_familia("Ana Pérez", 5, 3, "fruta")
+    assert t == ("En estos 5 días, a Ana le sirvieron un plato balanceado 3 de 5 veces. "
+                 "Lo que más le faltó fue fruta: La fruta le da vitaminas para no enfermarse.")
+    assert reports.parrafo_familia("Ana", 1, 1, None).endswith("¡Muy bien!")

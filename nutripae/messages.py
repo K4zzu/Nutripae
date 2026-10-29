@@ -10,6 +10,14 @@ RAZON = {
     "energetico": "El arroz, la papa y el plátano te dan energía para jugar y estudiar.",
 }
 
+# Las mismas razones, en tercera persona, para el informe que leen las familias.
+RAZON_FAMILIA = {
+    "verdura": "La verdura le ayuda a crecer fuerte.",
+    "fruta": "La fruta le da vitaminas para no enfermarse.",
+    "proteina": "La proteína construye sus músculos.",
+    "energetico": "El arroz, la papa y el plátano le dan energía para jugar y estudiar.",
+}
+
 VERDE = {
     "ninos": [
         "¡Hoy sí tienes fruta!",

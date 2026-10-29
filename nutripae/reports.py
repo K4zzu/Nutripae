@@ -41,16 +41,20 @@ def parrafo_padres(con: sqlite3.Connection, estudiante_id: int, nombre: str, des
     n = len(dias)
     if n == 0:
         return "En este periodo no hay verificaciones registradas."
-    primero = nombre.split()[0] if nombre.split() else nombre
     buenos = sum(d["ultima"]["semaforo"] == "verde" for d in dias)
-    inicio = "En este día" if n == 1 else f"En estos {n} días"
-    texto = f"{inicio}, a {primero} le sirvieron un plato balanceado {buenos} de {n} veces."
     faltas = history.faltas_por_grupo(con, estudiante_id, desde, hasta)
-    if not faltas:
+    grupo = max(faltas, key=lambda g: (faltas[g], g)) if faltas else None
+    return parrafo_familia(nombre, n, buenos, grupo)
+
+
+def parrafo_familia(nombre: str, n: int, verdes: int, grupo: str | None) -> str:
+    primero = nombre.split()[0] if nombre.split() else nombre
+    inicio = "En este día" if n == 1 else f"En estos {n} días"
+    texto = f"{inicio}, a {primero} le sirvieron un plato balanceado {verdes} de {n} veces."
+    if grupo is None:
         return texto + " No le faltó ningún grupo de alimentos. ¡Muy bien!"
-    grupo = max(faltas, key=lambda g: (faltas[g], g))
     etiqueta = foods.GRUPO_LABEL.get(grupo, grupo).lower()
-    razon = messages.RAZON.get(grupo, "")
+    razon = messages.RAZON_FAMILIA.get(grupo, "")
     return f"{texto} Lo que más le faltó fue {etiqueta}: {razon}" if razon else f"{texto} Lo que más le faltó fue {etiqueta}."
 
 
