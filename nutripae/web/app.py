@@ -38,7 +38,8 @@ def _analizador(settings: Settings, con) -> Analizador | None:
 def crear_app(settings: Settings) -> FastAPI:
     app = FastAPI(title="NutriPAE")
     app.state.settings = settings
-    app.state.con = db.conectar(settings.db_path)
+    app.state.con = db.ConexionPorHilo(settings.db_path)
+    app.state.con.actual()  # crea el esquema al arrancar
     app.state.templates = Jinja2Templates(directory=str(BASE / "templates"))
     app.state.templates.env.globals["primera_sede"] = lambda request: (
         routes_history._sedes_visibles(request) or [None])[0]

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
 from pathlib import Path
 
 ESQUEMA = """
@@ -86,13 +87,54 @@ CREATE TABLE IF NOT EXISTS parametros(
 def conectar(path: Path) -> sqlite3.Connection:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    con = sqlite3.connect(path, check_same_thread=False)
+    con = sqlite3.connect(path, check_same_thread=False, timeout=10)
     con.row_factory = sqlite3.Row
     con.execute("PRAGMA journal_mode=WAL")
     con.execute("PRAGMA foreign_keys=ON")
     con.executescript(ESQUEMA)
     con.commit()
     return con
+
+
+class ConexionPorHilo:
+    """Una conexión SQLite por hilo, creada al primer uso con `conectar(path)`.
+
+    Se usa como una conexión normal: cada atributo (`execute`, `commit`, `rollback`,
+    `row_factory`, `in_transaction`…) se resuelve sobre la conexión del hilo actual, así
+    la transacción de una petición nunca se mezcla con la de otra.
+    """
+
+    def __init__(self, path: Path):
+        object.__setattr__(self, "_path", Path(path))
+        object.__setattr__(self, "_local", threading.local())
+        object.__setattr__(self, "_todas", [])
+        object.__setattr__(self, "_cerrojo", threading.Lock())
+
+    def actual(self) -> sqlite3.Connection:
+        con = getattr(self._local, "con", None)
+        if con is None:
+            con = conectar(self._path)
+            self._local.con = con
+            with self._cerrojo:
+                self._todas.append(con)
+        return con
+
+    def __getattr__(self, nombre):
+        return getattr(self.actual(), nombre)
+
+    def __setattr__(self, nombre, valor):
+        setattr(self.actual(), nombre, valor)
+
+    def close(self) -> None:
+        """Cierra las conexiones de todos los hilos."""
+        with self._cerrojo:
+            todas, self._todas[:] = list(self._todas), []
+        for con in todas:
+            try:
+                con.close()
+            except sqlite3.Error:
+                pass
+        self._local.con = None
 
 
 def param(con: sqlite3.Connection, clave: str, default):
