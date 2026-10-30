@@ -209,3 +209,40 @@ def test_mismo_nombre_normalizado_si_actualiza(settings):
     r = students.importar_excel(con, xlsx([("A1", "  ANA   perez ", "4°", "4-B", "IE Nueva", "no")]))
     assert r["errores"] == [] and r["actualizados"] == 1
     assert con.execute("select grupo, sede, consentimiento from estudiantes").fetchone()[:] == ("4-B", "IE Nueva", 0)
+
+
+# --- celda de consentimiento vacía y orden de filas rechazadas -----------------------------------
+
+def test_recarga_con_celda_vacia_conserva_consentimiento_y_tarjeta(settings):
+    con = db.conectar(settings.db_path)
+    students.importar_excel(con, xlsx([("A1", "Ana Pérez", "3°", "3-A", "IE", "sí")]))
+    _tarjeta(con, con.execute("select id from estudiantes").fetchone()[0])
+    r = students.importar_excel(con, xlsx([("A1", "Ana Pérez", "3°", "3-A", "IE", None)]))
+    assert r["actualizados"] == 1
+    assert con.execute("select consentimiento from estudiantes").fetchone()[0] == 1
+    assert con.execute("select activa from tarjetas where codigo='QR1'").fetchone()[0] == 1
+
+
+@pytest.mark.parametrize("valor", ["no", "NO", "0", "false", "n"])
+def test_no_explicito_quita_consentimiento_y_cancela_tarjeta(settings, valor):
+    con = db.conectar(settings.db_path)
+    students.importar_excel(con, xlsx([("A1", "Ana Pérez", "3°", "3-A", "IE", "sí")]))
+    _tarjeta(con, con.execute("select id from estudiantes").fetchone()[0])
+    students.importar_excel(con, xlsx([("A1", "Ana Pérez", "3°", "3-A", "IE", valor)]))
+    assert con.execute("select consentimiento from estudiantes").fetchone()[0] == 0
+    assert con.execute("select activa from tarjetas where codigo='QR1'").fetchone()[0] == 0
+
+
+def test_nuevo_con_celda_vacia_queda_sin_consentimiento(settings):
+    con = db.conectar(settings.db_path)
+    r = students.importar_excel(con, xlsx([("A1", "Ana Pérez", "3°", "3-A", "IE", "")]))
+    assert r["creados"] == 1
+    assert con.execute("select consentimiento from estudiantes").fetchone()[0] == 0
+
+
+def test_codigo_reutilizado_no_gasta_puesto_en_la_lista(settings):
+    con = db.conectar(settings.db_path)
+    students.importar_excel(con, xlsx([("A1", "Ana Pérez", "3°", "3-A", "IE", "sí")]))
+    students.importar_excel(con, xlsx([("A1", "Carlos Ruiz", "3°", "3-A", "IE", "sí"),
+                                       ("A2", "Luis Gómez", "3°", "3-A", "IE", "sí")]))
+    assert con.execute("select orden from estudiantes where codigo='A2'").fetchone()[0] == 1

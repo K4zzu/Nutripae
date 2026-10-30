@@ -15,6 +15,7 @@ COLUMNAS = {"codigo", "nombre", "grado", "sede"}
 OPCIONALES = {"grupo", "consentimiento"}
 MAX_RESULTADOS = 20
 _SI = {"si", "1", "true", "x", "verdadero"}
+_NO = {"no", "0", "false", "n"}
 
 
 class ColumnaFaltante(ValueError):
@@ -34,6 +35,16 @@ def _norm(texto) -> str:
 def _nombre_norm(texto) -> str:
     """Nombre comparable: sin mayúsculas, sin tildes y con los espacios colapsados."""
     return " ".join(_norm(texto).split())
+
+
+def _consentimiento(texto) -> bool | None:
+    """Sí explícito -> True; no explícito -> False; vacío o cualquier otro valor -> None (se conserva)."""
+    t = _norm(texto)
+    if t in _SI:
+        return True
+    if t in _NO:
+        return False
+    return None
 
 
 def _texto(valor) -> str:
@@ -87,7 +98,6 @@ def importar_excel(con: sqlite3.Connection, ruta_o_bytes, *, hash_documento: boo
         i = idx.get(col)
         return _texto(fila[i]) if i is not None and i < len(fila) else ""
 
-    hay_consentimiento = "consentimiento" in idx
     creados = actualizados = 0
     errores: list[str] = []
     sin_consentimiento: list[int] = []
@@ -108,24 +118,25 @@ def importar_excel(con: sqlite3.Connection, ruta_o_bytes, *, hash_documento: boo
             grupo = celda(fila, "grupo") or celda(fila, "grado")
             if hash_documento and codigo.isdigit() and len(codigo) >= 6:
                 codigo = hash_codigo(codigo, secret)
-            consentimiento = 1 if _norm(celda(fila, "consentimiento")) in _SI else 0
-            clave = (sede, grado, grupo)
-            contador[clave] = contador.get(clave, 0) + 1
+            # sin columna o con la celda vacía se conserva el valor guardado (los nuevos quedan en 0)
+            consentimiento = _consentimiento(celda(fila, "consentimiento"))
             existe = con.execute("SELECT id, nombre FROM estudiantes WHERE codigo=?", (codigo,)).fetchone()
             if existe is not None and _nombre_norm(existe["nombre"]) != _nombre_norm(nombre):
                 errores.append(f"Fila {n}: el código ya pertenece a otro estudiante (posible código reutilizado)")
                 continue
-            # sin la columna de consentimiento se conserva el valor guardado (solo los nuevos quedan en 0)
+            clave = (sede, grado, grupo)
+            contador[clave] = contador.get(clave, 0) + 1  # una fila rechazada no gasta un puesto en la lista
             con.execute(
                 "INSERT INTO estudiantes(codigo, nombre, grado, grupo, sede, orden, consentimiento, activo) "
                 "VALUES(?,?,?,?,?,?,?,1) ON CONFLICT(codigo) DO UPDATE SET nombre=excluded.nombre, "
                 "grado=excluded.grado, grupo=excluded.grupo, sede=excluded.sede, orden=excluded.orden, "
                 "consentimiento=CASE WHEN ? THEN excluded.consentimiento ELSE estudiantes.consentimiento END, "
                 "activo=1",
-                (codigo, nombre, grado, grupo, sede, contador[clave], consentimiento, 1 if hay_consentimiento else 0))
+                (codigo, nombre, grado, grupo, sede, contador[clave], 1 if consentimiento else 0,
+                 0 if consentimiento is None else 1))
             if existe:
                 actualizados += 1
-                if hay_consentimiento and not consentimiento:
+                if consentimiento is False:
                     sin_consentimiento.append(existe["id"])
             else:
                 creados += 1
