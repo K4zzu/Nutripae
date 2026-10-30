@@ -280,7 +280,7 @@ nutripae/foods.py          alimentos conocidos y su grupo
 deploy/                    Lightsail: script de instalación, systemd y Nginx
 docs/                      postulación, diseño, identidad visual y capturas
 docs/ejemplos/             lista de estudiantes de prueba (nombres ficticios)
-docs/brochure/             brochure A4 para jurados (PDF y HTML imprimible)
+docs/brochure/             presentación del pitch (PDF, 13 láminas) y brochure A4 para jurados (PDF y HTML)
 ```
 
 ## Licencia
