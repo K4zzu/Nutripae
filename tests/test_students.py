@@ -246,3 +246,10 @@ def test_codigo_reutilizado_no_gasta_puesto_en_la_lista(settings):
     students.importar_excel(con, xlsx([("A1", "Carlos Ruiz", "3°", "3-A", "IE", "sí"),
                                        ("A2", "Luis Gómez", "3°", "3-A", "IE", "sí")]))
     assert con.execute("select orden from estudiantes where codigo='A2'").fetchone()[0] == 1
+
+
+def test_carga_tiene_zona_de_arrastre(client, settings):
+    login(client, settings, ["admin"])
+    html = client.get("/admin/estudiantes").text
+    assert 'id="zona-arrastre"' in html and "Arrastra" in html
+    assert "/static/admin_estudiantes.js" in html

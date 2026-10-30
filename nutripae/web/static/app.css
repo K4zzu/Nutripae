@@ -225,6 +225,12 @@ body { margin: 0; background: var(--bg); }
 .np-admin-carga input[type="file"] { font: 600 15px var(--sans); color: var(--tinta2); }
 .np-admin-carga input[type="file"]::file-selector-button { margin-right: 12px; min-height: 44px; padding: 0 18px; border-radius: 999px;
   border: 2px solid var(--morado); background: var(--surf); color: var(--morado); font: 700 15px var(--sans); cursor: pointer; }
+.np-admin-zona { align-self: stretch; display: flex; flex-direction: column; gap: 8px; align-items: center; padding: 22px 18px;
+  border: 2px dashed var(--morado); border-radius: 20px; background: var(--surf); text-align: center; transition: background .15s, border-color .15s; }
+.np-admin-zona.np-arrastrando { background: var(--morado-claro); border-style: solid; }
+.np-admin-zona-texto { margin: 0; font-size: 15px; color: var(--tinta2); }
+.np-admin-zona-texto strong { color: var(--morado); }
+.np-admin-zona-nombre { margin: 0; font-weight: 700; color: var(--verde-oscuro); }
 .np-admin-sede h2 { margin: 0 0 4px; font-size: 26px; font-weight: 700; }
 .np-admin-sede h3 { margin: 18px 0 6px; font-size: 18px; font-weight: 600; color: var(--tinta2); }
 .np-admin-tabla { width: 100%; border-collapse: collapse; }

@@ -10,7 +10,11 @@
 
   <form method="post" action="/admin/estudiantes/cargar" enctype="multipart/form-data" class="np-card np-admin-carga">
     <label for="archivo">Lista de estudiantes (Excel)</label>
-    <input id="archivo" name="archivo" type="file" accept=".xlsx" required>
+    <div id="zona-arrastre" class="np-admin-zona">
+      <input id="archivo" name="archivo" type="file" accept=".xlsx" required>
+      <p class="np-admin-zona-texto"><strong>Arrastra el archivo aquí</strong> o elige uno con el botón.</p>
+      <p id="archivo-nombre" class="np-admin-zona-nombre" role="status" hidden></p>
+    </div>
     <p class="np-sub">Columnas: código, nombre, grado, sede. Opcionales: grupo, consentimiento.</p>
     <button type="submit" class="np-btn">Cargar lista</button>
   </form>
@@ -60,4 +64,5 @@
   <p class="np-sub">Todavía no hay estudiantes. Sube la lista en Excel.</p>
   {% endfor %}
 </main>
+<script src="/static/admin_estudiantes.js"></script>
 {% endblock %}
