@@ -186,6 +186,28 @@ def siguiente(con: sqlite3.Connection, sede: str, grado: str, grupo: str | None,
     return None
 
 
+def cursos(con: sqlite3.Connection, sedes: list[str]) -> list[dict]:
+    """Cursos (sede · grupo) con estudiantes activos, en el orden en que llegaron en el archivo."""
+    salida = []
+    for sede in sedes:
+        for r in con.execute(
+                "SELECT grado, grupo, COUNT(*) AS total FROM estudiantes WHERE activo=1 AND sede=? "
+                "GROUP BY grado, grupo ORDER BY MIN(id)", (sede,)):
+            salida.append({"sede": sede, "grado": r["grado"], "grupo": r["grupo"], "total": r["total"]})
+    return salida
+
+
+def lista_curso(con: sqlite3.Connection, sede: str, grupo: str, hoy: date) -> list[dict]:
+    """Estudiantes del curso por orden de lista, con si ya tienen verificación con cámara hoy."""
+    filas = con.execute(
+        "SELECT e.id, e.nombre, e.grado, e.grupo, e.sede, EXISTS(SELECT 1 FROM verificaciones v "
+        "WHERE v.estudiante_id=e.id AND v.modo='camara' AND substr(v.ts,1,10)=?) AS verificado_hoy "
+        "FROM estudiantes e WHERE e.activo=1 AND e.sede=? AND e.grupo IS ? ORDER BY e.orden, e.id",
+        (hoy.isoformat(), sede, grupo)).fetchall()
+    return [{"id": f["id"], "nombre": f["nombre"], "grado": f["grado"], "grupo": f["grupo"], "sede": f["sede"],
+             "verificado_hoy": bool(f["verificado_hoy"])} for f in filas]
+
+
 def set_consentimiento(con: sqlite3.Connection, estudiante_id: int, valor: bool) -> None:
     con.execute("UPDATE estudiantes SET consentimiento=? WHERE id=?", (1 if valor else 0, estudiante_id))
     if not valor:

@@ -45,6 +45,8 @@
     practica: $("practica"), practicaBanda: $("practica-banda"), situacion: $("situacion"), grado: $("grado-sin-estudiante"),
     panelBuscar: $("panel-buscar"), buscarQ: $("buscar-q"), buscarGrado: $("buscar-grado"), buscarLista: $("buscar-lista"),
     panelCorregir: $("panel-corregir"), corregirLista: $("corregir-lista"), inicio: $("inicio"),
+    paseCurso: $("pase-curso"), pase: $("btn-pase"), paseBanda: $("pase-banda"), paseTurno: $("pase-turno"),
+    paseProgreso: $("pase-progreso"), paseNoEsta: $("btn-pase-no-esta"), paseTerminar: $("btn-pase-terminar"),
   };
   const token = (nombre) => getComputedStyle(document.documentElement).getPropertyValue(nombre).trim();
   const iconoEspera = el.icono.innerHTML;
@@ -60,6 +62,16 @@
     veredicto: null, alimentos: null, temporizador: null,
     actividad: Date.now(), // último veredicto, tarjeta vista o toque
   };
+  // Pase de lista: la docente llama por nombre; el turno se atribuye sin tarjeta.
+  const pase = {
+    activo: false, sede: "", grupo: "", fecha: "",
+    nombres: {},   // id -> nombre
+    total: 0,
+    cola: [],      // ids pendientes en orden de lista; "No está" manda al final
+    saltados: [],  // ids que no estaban cuando se les llamó
+    hechos: [],    // ids verificados hoy
+    resumen: false,
+  };
 
   // ------------------------------------------------------------------ preferencias guardadas
   el.practica.checked = sesion.get("np.practica", "0") === "1";
@@ -72,7 +84,7 @@
 
   function ajustarBotones() {
     // En la estación no hay botón de captura, salvo en práctica (no hay tarjeta que dispare la toma).
-    el.capturar.hidden = ESTACION && !el.practica.checked;
+    el.capturar.hidden = ESTACION && !el.practica.checked && !pase.activo;
     el.practicaBanda.hidden = !el.practica.checked; // aviso visible para la docente; la capa del niño no cambia
   }
   ajustarBotones();
@@ -150,11 +162,11 @@
 
     if (!ESTACION) return;
     if (!el.inicio.hidden) return; // en la pantalla de inicio no se pide tarjeta ni se captura
-    if (s.estado === "esperando" && ahora - s.actividad > INACTIVA) { mostrarInicio(); return; }
+    if (s.estado === "esperando" && ahora - s.actividad > INACTIVA && !pase.activo) { mostrarInicio(); return; }
     if (s.estado === "esperando") {
       if (codigo && codigo !== s.qrUsado && ahora - s.qrDesde >= QR_ESTABLE) {
         capturar();
-      } else if (!codigo && videoListo() && ahora - s.ultimoQR > SIN_TARJETA) {
+      } else if (!codigo && videoListo() && ahora - s.ultimoQR > SIN_TARJETA && !pase.activo) {
         pedirTarjeta();
       } else if (codigo) {
         quitarPedido();
@@ -204,12 +216,14 @@
     const datos = new FormData();
     const toma = practica ? { blob: await fotoGris(), qr: null } : await fotoCamara();
     const tarjeta = s.elegido ? null : tarjetaParaToma(toma.qr);
+    const turno = !s.elegido && !tarjeta ? paseTurno() : null; // la tarjeta manda sobre el turno
     datos.append("foto", toma.blob, "bandeja.jpg");
     datos.append("modo", practica ? "demo" : "camara");
     if (practica) datos.append("escenario", el.situacion.value);
     datos.append("grado", el.grado.value);
     if (s.elegido) datos.append("estudiante_id", String(s.elegido.id));
     else if (tarjeta) datos.append("tarjeta", tarjeta);
+    else if (turno) datos.append("estudiante_id", String(turno));
     s.qrUsado = tarjeta;
 
     let r;
@@ -244,6 +258,8 @@
 
   function textosEspera() {
     el.titulo.textContent = "Coloca la bandeja";
+    const turno = paseTurno();
+    if (turno) { el.detalle.textContent = `Turno de ${pase.nombres[turno]}.`; return; }
     el.detalle.textContent = ESTACION ? "Pon tu tarjeta sobre la bandeja." : "Apunta la cámara a la bandeja y a la tarjeta.";
   }
 
@@ -285,6 +301,7 @@
     el.detalle.textContent = j.detalle;
     if (j.foto_url) el.foto.src = j.foto_url;
     el.foto.hidden = false; el.toques.hidden = false; el.video.hidden = true;
+    if (j.estudiante) paseMarcar(j.estudiante.id); // en práctica avanza igual, aunque no se guarde
     pintarDocente(j);
     if (!ESTACION) el.semaforo.scrollIntoView({ behavior: "smooth", block: "start" });
     if (ESTACION) s.temporizador = setTimeout(volver, ESPERA_VEREDICTO);
@@ -304,6 +321,8 @@
     if (j) return t("▢", "Sin estudiante: no se guardó a nombre de nadie.");
     if (s.elegido) return t("✓", `Elegido: ${s.elegido.nombre}`, "np-v-bien");
     if (s.qrLeido) return t("▣", `Tarjeta leída: ${s.qrLeido}`, "np-v-bien");
+    const turno = paseTurno();
+    if (turno) return t("▣", `Pase de lista: ${pase.nombres[turno]}`, "np-v-bien");
     t("▢", "Sin tarjeta leída");
   }
 
@@ -498,6 +517,128 @@
   el.buscarQ.addEventListener("input", () => { clearTimeout(esperaBusqueda); esperaBusqueda = setTimeout(buscar, 250); });
   el.buscarGrado.addEventListener("change", buscar);
 
+  // ------------------------------------------------------------------ Pasar lista
+  const hoyISO = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+  const claveCurso = (c) => `${c.sede}|${c.grupo}`;
+
+  function paseTurno() {
+    return pase.activo && !pase.resumen && pase.cola.length ? pase.cola[0] : null;
+  }
+
+  function paseGuardar() {
+    if (!pase.activo) { local.set("np.pase", ""); return; }
+    local.set("np.pase", JSON.stringify({
+      fecha: pase.fecha, sede: pase.sede, grupo: pase.grupo, cola: pase.cola, saltados: pase.saltados,
+    }));
+  }
+
+  function paseFaltantes() {
+    return pase.saltados.filter((id) => !pase.hechos.includes(id)).map((id) => pase.nombres[id]);
+  }
+
+  function pasePintar() {
+    el.paseBanda.hidden = !pase.activo;
+    el.pase.textContent = pase.activo ? "Pase en curso" : "Pasar lista";
+    el.pase.disabled = pase.activo;
+    el.paseCurso.disabled = pase.activo;
+    ajustarBotones();
+    if (pase.activo) {
+      const faltan = paseFaltantes();
+      const quedan = pase.cola.length;
+      el.paseNoEsta.hidden = pase.resumen || !quedan;
+      el.paseTerminar.textContent = pase.resumen ? "Cerrar" : "Terminar";
+      if (pase.resumen) {
+        el.paseTurno.textContent = `Listo: ${pase.hechos.length} de ${pase.total}`;
+        el.paseProgreso.textContent = faltan.length ? `Faltaron: ${faltan.join(", ")}` : "Pasaron todos.";
+      } else if (!quedan) {
+        el.paseTurno.textContent = "Pasaron todos";
+        el.paseProgreso.textContent = `${pase.hechos.length} de ${pase.total} verificados · ${pase.grupo}`;
+      } else {
+        const id = pase.cola[0];
+        el.paseTurno.textContent = `Turno de ${pase.nombres[id]}`;
+        el.paseProgreso.textContent = `${pase.hechos.length + 1} de ${pase.total} · ${pase.grupo}`
+          + (faltan.length ? ` · Faltan: ${faltan.join(", ")}` : "")
+          + (pase.saltados.includes(id) ? " · Ya se le llamó antes" : "");
+      }
+    }
+    if (s.estado === "esperando") textosEspera();
+    mostrarLectura();
+  }
+
+  async function paseIniciar(sede, grupo, guardado) {
+    let lista;
+    try { lista = await pedir(`/api/estudiantes/lista?${new URLSearchParams({ sede, grupo })}`); }
+    catch (e) { return mostrarAviso("No se pudo cargar la lista del curso."); }
+    if (!Array.isArray(lista) || !lista.length) return mostrarAviso("Ese curso no tiene estudiantes.");
+    pase.activo = true; pase.resumen = false; pase.sede = sede; pase.grupo = grupo; pase.fecha = hoyISO();
+    pase.nombres = {}; lista.forEach((e) => { pase.nombres[e.id] = e.nombre; });
+    pase.total = lista.length;
+    pase.hechos = lista.filter((e) => e.verificado_hoy).map((e) => e.id);
+    const pendientes = lista.filter((e) => !e.verificado_hoy).map((e) => e.id);
+    const orden = guardado && Array.isArray(guardado.cola) ? guardado.cola.filter((id) => pendientes.includes(id)) : [];
+    pase.cola = orden.concat(pendientes.filter((id) => !orden.includes(id)));
+    pase.saltados = guardado && Array.isArray(guardado.saltados) ? guardado.saltados.filter((id) => id in pase.nombres) : [];
+    paseGuardar();
+    pasePintar();
+    s.actividad = Date.now();
+  }
+
+  function paseMarcar(id) {
+    if (!pase.activo || !(id in pase.nombres)) return;
+    if (!pase.hechos.includes(id)) pase.hechos.push(id);
+    pase.cola = pase.cola.filter((x) => x !== id);
+    paseGuardar();
+    pasePintar();
+  }
+
+  function paseNoEsta() {
+    if (!paseTurno()) return;
+    const id = pase.cola.shift();
+    if (!pase.saltados.includes(id)) pase.saltados.push(id);
+    pase.cola.push(id);
+    if (pase.cola.every((x) => pase.saltados.includes(x))) pase.resumen = true; // dio la vuelta completa
+    paseGuardar();
+    pasePintar();
+  }
+
+  function paseTerminar() {
+    if (!pase.resumen) { pase.resumen = true; paseGuardar(); pasePintar(); return; }
+    pase.activo = false; pase.resumen = false; pase.cola = []; pase.saltados = []; pase.hechos = [];
+    paseGuardar();
+    pasePintar();
+  }
+
+  async function paseCargarCursos() {
+    let cursos = [];
+    try { cursos = await pedir("/api/estudiantes/cursos"); } catch (e) { /* sin lista: el selector queda vacío */ }
+    if (!Array.isArray(cursos)) cursos = [];
+    const elegido = local.get("np.pase.curso", "");
+    el.paseCurso.replaceChildren(new Option(cursos.length ? "Elige el curso" : "No hay cursos cargados", ""),
+      ...cursos.map((c) => new Option(`${c.sede} · ${c.grupo} (${c.total})`, claveCurso(c))));
+    if ([...el.paseCurso.options].some((o) => o.value === elegido)) el.paseCurso.value = elegido;
+    let guardado = null;
+    try { guardado = JSON.parse(local.get("np.pase", "") || "null"); } catch (e) { guardado = null; }
+    if (guardado && guardado.fecha === hoyISO() && cursos.some((c) => claveCurso(c) === `${guardado.sede}|${guardado.grupo}`)) {
+      el.paseCurso.value = `${guardado.sede}|${guardado.grupo}`;
+      paseIniciar(guardado.sede, guardado.grupo, guardado);
+    } else if (guardado) {
+      local.set("np.pase", ""); // el pase de otro día no se retoma
+    }
+  }
+
+  el.paseCurso.addEventListener("change", () => local.set("np.pase.curso", el.paseCurso.value));
+  el.pase.addEventListener("click", () => {
+    const [sede, grupo] = el.paseCurso.value.split("|");
+    if (!sede) { el.paseCurso.focus(); return; }
+    if (s.estado === "veredicto" || s.estado === "aviso") volver();
+    paseIniciar(sede, grupo, null);
+  });
+  el.paseNoEsta.addEventListener("click", paseNoEsta);
+  el.paseTerminar.addEventListener("click", paseTerminar);
+
   // ------------------------------------------------------------------ botones
   el.capturar.addEventListener("click", () => capturar());
   el.siguiente.addEventListener("click", volver);
@@ -536,5 +677,6 @@
   mostrarLectura();
   if (ESTACION) mostrarInicio();
   else iniciarCamara();
+  paseCargarCursos();
   setInterval(cicloQR, INTERVALO_QR);
 })();

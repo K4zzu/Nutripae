@@ -8,6 +8,18 @@
 </div>
 <main class="np-v" id="pantalla" data-estado="esperando">
 
+  <!-- Pase de lista: la docente llama por nombre y la franja muestra el turno -->
+  <div id="pase-banda" class="np-v-pase" role="status" hidden>
+    <div class="np-v-pase-texto">
+      <p id="pase-turno" class="np-v-pase-turno"></p>
+      <p id="pase-progreso" class="np-v-pase-progreso"></p>
+    </div>
+    <div class="np-v-pase-acciones">
+      <button type="button" id="btn-pase-no-esta" class="np-btn-sec">No está</button>
+      <button type="button" id="btn-pase-terminar" class="np-btn-sec">Terminar</button>
+    </div>
+  </div>
+
   <!-- Capa del niño: grande, legible a dos metros -->
   <section class="np-v-nino" aria-live="polite">
     <div class="np-camara np-v-vista">
@@ -38,6 +50,13 @@
         <button type="button" id="btn-corregir" class="np-btn-sec" disabled>Corregir</button>
         <button type="button" id="btn-buscar" class="np-btn-sec">Buscar</button>
       </div>
+    </div>
+
+    <div class="np-card np-v-pase-control">
+      <label for="pase-curso">Pasar lista</label>
+      <select id="pase-curso"><option value="">Elige el curso</option></select>
+      <button type="button" id="btn-pase" class="np-btn">Pasar lista</button>
+      <p class="np-sub">Llama a cada estudiante por su nombre; la pantalla pasa sola al siguiente.</p>
     </div>
 
     <div class="np-v-cuerpo">

@@ -106,6 +106,18 @@ def api_buscar(request: Request, q: str = "", grado: str = "", usuario=Depends(a
     return [_publico(e) for e in salida[:students.MAX_RESULTADOS]]
 
 
+@router.get("/api/estudiantes/cursos")
+def api_cursos(request: Request, usuario=Depends(auth.requiere(*ROLES_VERIFICAR))):
+    return students.cursos(request.app.state.con, _sedes(request))
+
+
+@router.get("/api/estudiantes/lista")
+def api_lista(request: Request, sede: str, grupo: str, usuario=Depends(auth.requiere(*ROLES_VERIFICAR))):
+    if sede not in _sedes(request):
+        return JSONResponse({"error": "sede", "mensaje": "Sede no permitida."}, status_code=403)
+    return students.lista_curso(request.app.state.con, sede, grupo, date.today())
+
+
 @router.get("/api/estudiantes/siguiente")
 def api_siguiente(request: Request, grado: str, grupo: str = "",
                   usuario=Depends(auth.requiere(*ROLES_VERIFICAR))):

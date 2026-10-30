@@ -90,7 +90,7 @@ servidor; si dos estaciones verifican a la vez, la segunda ve "Un momento…" un
 | Rol | Qué hace |
 |---|---|
 | **Niño** | Pone la tarjeta y el plato y lee el veredicto. No tiene cuenta. |
-| **Docente** | Verifica platos en el celular o la estación, busca al niño sin tarjeta, corrige un alimento mal nombrado y abre el historial de un niño de su sede. |
+| **Docente** | Verifica platos en el celular o la estación, pasa lista a un curso llamando por nombre, busca al niño sin tarjeta, corrige un alimento mal nombrado y abre el historial de un niño de su sede. |
 | **Nutricionista** | Ve el historial de cualquier niño de sus sedes, genera el PDF para la familia y ve el resumen por sede y grado. |
 | **Administrador** | Carga estudiantes desde Excel, imprime tarjetas QR, crea usuarios y asigna sedes, da de baja estudiantes y edita los parámetros. |
 
@@ -116,6 +116,13 @@ impreso o por WhatsApp de manos del colegio.
   en claro. Esa huella usa `NUTRIPAE_SECRET`: si se cambia la clave secreta, volver a cargar el mismo Excel crea
   estudiantes duplicados. No la cambies durante el piloto.
 - El orden de lista es el orden de las filas dentro de cada grupo; la búsqueda sugiere arriba al siguiente en lista.
+- **El grupo distingue un curso de otro.** El grado se guarda como nivel (preescolar, primaria o secundaria), así que
+  si todos los cursos llevan "A" en la columna grupo, 1°, 3° y 5° quedan mezclados. Usa "1A", "3A", "5A".
+  Hay una lista de ejemplo en `docs/ejemplos/estudiantes_prueba.xlsx`.
+- **Pasar lista** (en la pantalla de verificar): la docente elige el curso y la pantalla muestra "Turno de …"; llama a
+  cada niño por su nombre, el plato se atribuye sin tarjeta y pasa solo al siguiente. "No está" manda al niño al final
+  por si llega tarde; si en medio aparece una tarjeta QR, la tarjeta manda. El pase sobrevive a recargar la página y se
+  cierra solo al cambiar de día.
 - El consentimiento también se marca o retira después, estudiante por estudiante.
 
 ## Tarjetas QR

@@ -103,6 +103,24 @@ body { margin: 0; background: var(--bg); }
 /* ---------------------------------------------------------------- pantalla de verificación */
 .np-v { max-width: 1440px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
 
+/* pase de lista: franja morada con el turno, legible desde donde está la docente */
+.np-v-pase { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px;
+  padding: 16px 24px; border-radius: 24px; background: var(--morado); color: #fff; box-shadow: var(--sombra); }
+.np-v-pase[hidden] { display: none; }
+.np-v-pase-texto { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.np-v-pase-turno { margin: 0; font: 700 clamp(26px, 3.2vw, 44px)/1.1 var(--titulos); }
+.np-v-pase-progreso { margin: 0; font: 700 clamp(15px, 1.4vw, 19px)/1.3 var(--sans); opacity: .92; }
+.np-v-pase-acciones { display: flex; flex-wrap: wrap; gap: 10px; }
+.np-v-pase .np-btn-sec { min-height: 56px; font-size: 18px; border: 2px solid #fff; background: transparent; color: #fff; }
+.np-v-pase .np-btn-sec:hover { background: rgba(255, 255, 255, .14); }
+.np-v-pase .np-btn-sec[hidden] { display: none; }
+.np-v-pase-control { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; background: var(--suave); border: none; }
+.np-v-pase-control label { font: 600 20px var(--titulos); color: var(--morado); }
+.np-v-pase-control select { flex: 1 1 240px; max-width: 420px; }
+.np-v-pase-control .np-sub { flex-basis: 100%; margin: 0; }
+.np-v-pase-control .np-btn { min-height: 56px; }
+.np-v-pase-control .np-btn:disabled { opacity: .6; cursor: default; }
+
 /* capa del niño */
 .np-v-nino { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; align-items: stretch; }
 .np-camara { background: var(--tinta); border-radius: 24px; padding: 14px; color: var(--surf); }
