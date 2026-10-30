@@ -8,7 +8,7 @@ from itertools import groupby
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 
-from nutripae import auth, cards, students
+from nutripae import auth, cards, db, students
 from nutripae.web.routes_verify import ROLES_VERIFICAR
 
 router = APIRouter()
@@ -104,6 +104,15 @@ def api_buscar(request: Request, q: str = "", grado: str = "", usuario=Depends(a
     for sede in _sedes(request):
         salida += students.buscar(con, q, sede, grado or None)
     return [_publico(e) for e in salida[:students.MAX_RESULTADOS]]
+
+
+@router.get("/api/tarjetas/{codigo}")
+def api_tarjeta(codigo: str, request: Request, usuario=Depends(auth.requiere(*ROLES_VERIFICAR))):
+    """Estudiante de una tarjeta leída en vivo, para mostrar su nombre antes de la toma."""
+    e = db.estudiante_por_tarjeta(request.app.state.con, codigo.strip())
+    if e is None or e["sede"] not in _sedes(request):
+        return JSONResponse({"error": "tarjeta", "mensaje": "Tarjeta no reconocida."}, status_code=404)
+    return _publico(e)
 
 
 @router.get("/api/estudiantes/cursos")

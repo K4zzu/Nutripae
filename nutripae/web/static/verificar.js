@@ -58,6 +58,7 @@
     qrLeido: null,         // último QR visto en vivo
     qrLeidoEn: 0,          // cuándo se vio por última vez
     qrUsado: null,         // QR del último veredicto: no vuelve a disparar mientras siga a la vista
+    tarjetas: {},          // código -> estudiante (o null si no se reconoce), consultado al verla
     elegido: null,         // estudiante elegido con Buscar
     veredicto: null, alimentos: null, temporizador: null,
     actividad: Date.now(), // último veredicto, tarjeta vista o toque
@@ -154,7 +155,7 @@
     if (codigo && s.estado !== "analizando") {
       const cambio = codigo !== s.qrLeido;
       s.qrLeido = codigo; s.qrLeidoEn = ahora;
-      if (cambio && !ESTACION) mostrarLectura();
+      if (cambio) { consultarTarjeta(codigo); mostrarLectura(); }
     } else if (!ESTACION && s.qrLeido && ahora - s.qrLeidoEn > QR_RECIENTE && s.estado !== "analizando") {
       s.qrLeido = null; // la tarjeta ya no está a la vista: no se usará al capturar
       mostrarLectura();
@@ -216,6 +217,8 @@
     const datos = new FormData();
     const toma = practica ? { blob: await fotoGris(), qr: null } : await fotoCamara();
     const tarjeta = s.elegido ? null : tarjetaParaToma(toma.qr);
+    const conocido = tarjeta && s.tarjetas[tarjeta];
+    if (conocido) el.detalle.textContent = `Hola, ${conocido.nombre.split(" ")[0]}. Quédate quieto un momento.`;
     const turno = !s.elegido && !tarjeta ? paseTurno() : null; // la tarjeta manda sobre el turno
     datos.append("foto", toma.blob, "bandeja.jpg");
     datos.append("modo", practica ? "demo" : "camara");
@@ -320,10 +323,28 @@
     if (j && j.estudiante) return t("✓", `${j.estudiante.nombre} · ${j.estudiante.grado}`, "np-v-bien");
     if (j) return t("▢", "Sin estudiante: no se guardó a nombre de nadie.");
     if (s.elegido) return t("✓", `Elegido: ${s.elegido.nombre}`, "np-v-bien");
-    if (s.qrLeido) return t("▣", `Tarjeta leída: ${s.qrLeido}`, "np-v-bien");
+    if (s.qrLeido) {
+      const e = s.tarjetas[s.qrLeido];
+      if (e) return t("▣", `Tarjeta: ${e.nombre}${e.grupo ? ` · ${e.grupo}` : ""}`, "np-v-bien");
+      if (e === null) return t("✕", "Tarjeta no reconocida: el plato no quedará a nombre de nadie.", "np-v-mal");
+      return t("▣", "Tarjeta leída…", "np-v-bien");
+    }
     const turno = paseTurno();
     if (turno) return t("▣", `Pase de lista: ${pase.nombres[turno]}`, "np-v-bien");
     t("▢", "Sin tarjeta leída");
+  }
+
+  // Al ver una tarjeta se consulta de quién es, para mostrar el nombre antes de la toma.
+  async function consultarTarjeta(codigo) {
+    if (codigo in s.tarjetas) return;
+    s.tarjetas[codigo] = undefined;
+    try {
+      const r = await fetch(`/api/tarjetas/${encodeURIComponent(codigo)}`, { credentials: "same-origin" });
+      if (r.status === 404) s.tarjetas[codigo] = null;
+      else if (r.ok) s.tarjetas[codigo] = await r.json();
+      else delete s.tarjetas[codigo];
+    } catch (e) { delete s.tarjetas[codigo]; }
+    if (s.qrLeido === codigo && s.estado !== "veredicto") mostrarLectura();
   }
 
   // ------------------------------------------------------------------ capa de la docente

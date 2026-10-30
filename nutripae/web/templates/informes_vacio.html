@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Informes · NutriPAE{% endblock %}
+{% block content %}
+<main class="np-hist">
+  <h1 class="np-h">Informes</h1>
+  <section class="np-card np-vacio">
+    <p class="np-vacio-titulo">No hay estudiantes cargados todavía.</p>
+    <p class="np-sub">Los informes aparecen cuando hay una lista de estudiantes y verificaciones guardadas a su nombre:
+      el resumen por sede y grado, y el historial de cada niño con su PDF para la familia.</p>
+    {% if es_admin %}
+    <a class="np-btn" href="/admin/estudiantes">Cargar la lista de estudiantes</a>
+    {% else %}
+    <p class="np-sub">Pídele al administrador que cargue la lista desde Excel.</p>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}

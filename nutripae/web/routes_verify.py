@@ -74,10 +74,24 @@ def _umbrales(con):
     return lambda: db.param(con, "umbrales", UMBRALES_INICIALES)
 
 
+def _hay_estudiantes(request: Request) -> bool:
+    con = request.app.state.con
+    if "admin" in request.state.roles:
+        return con.execute("SELECT 1 FROM estudiantes WHERE activo=1 LIMIT 1").fetchone() is not None
+    sedes = sorted(request.state.sedes)
+    if not sedes:
+        return False
+    marcas = ",".join("?" * len(sedes))
+    return con.execute(f"SELECT 1 FROM estudiantes WHERE activo=1 AND sede IN ({marcas}) LIMIT 1",
+                       sedes).fetchone() is not None
+
+
 @router.get("/verificar")
 def pagina(request: Request, usuario=Depends(auth.usuario_actual)):
     return request.app.state.templates.TemplateResponse(
-        request, "verificar.html", {"usuario": usuario, "grados": GRADOS})
+        request, "verificar.html", {"usuario": usuario, "grados": GRADOS,
+                                    "sin_lista": not _hay_estudiantes(request),
+                                    "es_admin": "admin" in request.state.roles})
 
 
 @router.post("/api/verificar")

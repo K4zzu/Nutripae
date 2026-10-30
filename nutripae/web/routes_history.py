@@ -5,7 +5,8 @@ import re
 import unicodedata
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import Response
+from fastapi.responses import RedirectResponse, Response
+from urllib.parse import quote
 
 from nutripae import auth, db, foods, history, messages, reports
 from nutripae.web.routes_verify import GRADOS, ROLES_VERIFICAR, _sede_permitida
@@ -83,6 +84,16 @@ def historial_pdf(estudiante_id: int, request: Request, desde: str = "", hasta: 
     nombre = f"historial_{_ascii(partes[-1] if partes else est['nombre'])}_{ini.isoformat()}_{fin.isoformat()}.pdf"
     return Response(datos, media_type="application/pdf",
                     headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
+
+
+@router.get("/informes")
+def informes(request: Request, usuario=Depends(auth.requiere("nutricionista", "admin"))):
+    """Entrada a los informes: el resumen de la primera sede visible, o una explicación si no hay estudiantes."""
+    sedes = _sedes_visibles(request)
+    if sedes:
+        return RedirectResponse(f"/sedes/{quote(sedes[0])}/resumen", status_code=302)
+    return request.app.state.templates.TemplateResponse(
+        request, "informes_vacio.html", {"es_admin": "admin" in request.state.roles})
 
 
 @router.get("/sedes/{sede}/resumen")

@@ -42,8 +42,6 @@ def crear_app(settings: Settings) -> FastAPI:
     app.state.con = db.ConexionPorHilo(settings.db_path)
     app.state.con.actual()  # crea el esquema al arrancar
     app.state.templates = Jinja2Templates(directory=str(BASE / "templates"))
-    app.state.templates.env.globals["primera_sede"] = lambda request: (
-        routes_history._sedes_visibles(request) or [None])[0]
     app.state.analizador = _analizador(settings, app.state.con)
     app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")
 

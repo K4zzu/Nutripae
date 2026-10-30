@@ -36,6 +36,7 @@ body { margin: 0; background: var(--bg); }
   font: 600 clamp(22px, 2vw, 28px)/1.1 var(--titulos); padding: 0 32px; cursor: pointer;
   box-shadow: 0 6px 0 var(--morado-oscuro); transition: background-color .15s, transform .1s, box-shadow .1s; }
 .np-btn:hover { background: var(--morado-oscuro); }
+a.np-btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 .np-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--morado-oscuro); }
 .np-btn:disabled { background: var(--line); color: var(--muted); box-shadow: none; cursor: default; }
 .np-btn-sec { min-height: var(--boton-kiosco); border-radius: 999px; border: 3px solid var(--morado); background: var(--surf);
@@ -187,6 +188,13 @@ body { margin: 0; background: var(--bg); }
 .np-v-practica-banda { margin: 0 0 12px; padding: 12px 18px; border-radius: 14px; font-weight: 800;
   background: var(--amarillo-claro); color: var(--amarillo-texto); border: 2px solid var(--amarillo); }
 .np-v-practica-banda[hidden] { display: none; }
+.np-v-sin-lista { margin: 0 0 12px; padding: 12px 18px; border-radius: 14px; font-weight: 700;
+  background: var(--morado-claro); color: var(--morado-oscuro); border: 2px solid var(--morado); }
+.np-v-sin-lista span { display: inline-grid; place-items: center; width: 24px; height: 24px; margin-right: 6px;
+  border-radius: 50%; background: var(--morado); color: #fff; font-weight: 800; }
+.np-v-sin-lista a { color: var(--morado-oscuro); font-weight: 800; }
+.np-vacio { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+.np-vacio-titulo { margin: 0; font: 600 22px var(--titulos); color: var(--morado); }
 .np-v-practica-banda span { display: inline-grid; place-items: center; width: 24px; height: 24px; margin-right: 6px;
   border-radius: 50%; background: var(--amarillo); color: var(--tinta); }
 .np-v-docente select, .np-v-docente input[type="search"] { min-height: 44px; padding: 0 14px; border: 2px solid var(--line);

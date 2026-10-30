@@ -42,6 +42,10 @@
   <!-- Capa de la docente: pequeña, abajo -->
   <section class="np-v-docente" aria-label="Detalle para la docente">
     <p id="practica-banda" class="np-v-practica-banda" role="status" hidden><span aria-hidden="true">!</span> Práctica: no se guarda nada</p>
+    {% if sin_lista %}
+    <p class="np-v-sin-lista" role="status"><span aria-hidden="true">!</span> No hay lista de estudiantes cargada: el plato se verifica, pero no queda a nombre de nadie.
+      {% if es_admin %}<a href="/admin/estudiantes">Cargar la lista</a>{% else %}Pídele al administrador que la cargue.{% endif %}</p>
+    {% endif %}
     <div class="np-v-barra">
       <p id="lectura" class="np-v-lectura"><span aria-hidden="true">▢</span> Sin tarjeta leída</p>
       <div class="np-v-acciones">
