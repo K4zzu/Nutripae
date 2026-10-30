@@ -10,7 +10,8 @@ bandeja, la cámara lee la tarjeta y el plato en una sola toma, y en menos de 10
 - **La capa del niño** (arriba, grande, legible a dos metros): semáforo con color e ícono, su nombre y una sola razón
   ("Te falta verdura. La verdura te ayuda a crecer fuerte."), y la foto del plato con cada alimento coloreado por grupo.
 - **La capa de la docente** (abajo, pequeña): alimento por alimento con grupo, gramos estimados y estado, calorías y
-  nutrientes, y los botones **Siguiente**, **Corregir** y **Buscar**.
+  nutrientes, y los botones **Siguiente**, **Corregir** y **Buscar**, más la tarjeta **Pasar lista** para atribuir los
+  platos de un curso llamando por nombre. Al ver una tarjeta QR, la docente ve el nombre del niño antes de la toma.
 
 Con verde el niño sigue al comedor. Con amarillo o rojo vuelve a la fila a que le completen el plato y pasa otra vez.
 
@@ -132,7 +133,9 @@ nombre, grado, sede y el QR. **El QR contiene solo el código de la tarjeta**, n
 tarjeta perdida no expone nada y el administrador puede anularla y generar otra. Un niño sin consentimiento no recibe
 tarjeta. El QR se lee en el navegador; la foto solo viaja al servidor para analizar el plato.
 
-Si el niño no tiene tarjeta, la docente toca **Buscar** y elige su nombre en la lista del grado.
+Si el niño no tiene tarjeta, la docente toca **Buscar** y elige su nombre en la lista del grado, o activa **Pasar lista**
+para todo el curso (ver *Estudiantes desde Excel*). Una tarjeta desconocida o de otra sede se avisa al momento y el
+plato no queda a nombre de nadie.
 
 ## Historial y PDF para la familia
 
@@ -142,11 +145,14 @@ varias veces en el mismo almuerzo, cuenta la última y las anteriores quedan com
 
 El botón **Generar PDF** genera el informe para la familia en el periodo elegido, en lenguaje sin jerga y con una o dos fotos
 de ejemplo. El sistema no lo envía a nadie. Cada consulta del historial y cada PDF queda en la auditoría. La
-nutricionista ve además el resumen por sede: platos verdes por día, el grupo que más falta y los alimentos no aptos.
+nutricionista y el administrador tienen el enlace **Informes**: lleva al resumen por sede (platos verdes por día, el
+grupo que más falta y los alimentos no aptos) y, si todavía no hay estudiantes cargados, lo explica y ofrece cargar la
+lista. La pantalla de verificar también avisa cuando no hay lista de estudiantes.
 
 ## Administración
 
-- **Estudiantes**: carga del Excel, consentimiento, baja, tarjetas por curso y anulación de una tarjeta.
+- **Estudiantes**: carga del Excel (también arrastrando el archivo), consentimiento, baja, tarjetas por curso y
+  anulación de una tarjeta.
 - **Usuarios**: crear, asignar roles y sedes, desactivar.
 - **Parámetros**: umbrales del plato balanceado y lista de alimentos conocidos con su grupo.
 
@@ -262,7 +268,7 @@ nutripae/fuse.py           cruce contorno ↔ alimento
 nutripae/overlay.py        foto anotada por grupo de alimento
 nutripae/analyze.py        análisis completo con cola de a uno
 nutripae/verificaciones.py guardado con consentimiento, fotos y muestra de entrenamiento
-nutripae/students.py       Excel, búsqueda, siguiente en lista, consentimiento
+nutripae/students.py       Excel, búsqueda, siguiente en lista, cursos y pase de lista, consentimiento
 nutripae/cards.py          tarjetas QR en PDF
 nutripae/history.py        historial por niño y resumen por sede
 nutripae/reports.py        PDF para la familia
@@ -273,6 +279,8 @@ nutripae/nutrition.py      tabla de composición ICBF
 nutripae/foods.py          alimentos conocidos y su grupo
 deploy/                    Lightsail: script de instalación, systemd y Nginx
 docs/                      postulación, diseño, identidad visual y capturas
+docs/ejemplos/             lista de estudiantes de prueba (nombres ficticios)
+docs/brochure/             brochure A4 para jurados (PDF y HTML imprimible)
 ```
 
 ## Licencia

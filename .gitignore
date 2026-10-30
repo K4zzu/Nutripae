@@ -50,3 +50,10 @@ desktop.ini
 
 # --- Espacio de trabajo de planes (superpowers) ---
 .superpowers/
+
+# --- Originales de marca del equipo (la app ya tiene sus copias en nutripae/web/static/img y docs/identidad) ---
+resources/
+
+# --- Material interno de preparación del pitch (no se publica; se genera desde la sesión de trabajo) ---
+docs/brochure/NutriPAE-preguntas.pdf
+docs/brochure/NutriPAE-equipo.pdf
